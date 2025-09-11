@@ -1,30 +1,30 @@
-# MCP Amadeus Server
+# Amadeus MCP Server
 
-Un serveur MCP (Model Context Protocol) pour l'API Amadeus, permettant la recherche de vols, d'hôtels, d'aéroports et d'informations sur les compagnies aériennes.
+A Model Context Protocol (MCP) server for the Amadeus API, enabling flight search, hotel search, airport search, and airline information retrieval.
 
-## Fonctionnalités
+## Features
 
-- **Recherche de vols** : Recherche de vols avec filtres avancés (classe, prix, escales, etc.)
-- **Analyse des prix** : Analyse des prix et prédictions pour des routes spécifiques
-- **Recherche d'aéroports** : Recherche d'aéroports par nom, ville ou code IATA
-- **Informations compagnies** : Récupération d'informations sur les compagnies aériennes
-- **Recherche d'hôtels** : Recherche d'hôtels par ville avec dates et nombre d'invités
+- **Flight Search**: Advanced flight search with filters (class, price, stops, etc.)
+- **Price Analysis**: Price analysis and predictions for specific routes
+- **Airport Search**: Search airports by name, city, or IATA code
+- **Airline Information**: Retrieve airline information by IATA codes
+- **Hotel Search**: Search hotels by city with dates and guest information
 
-## Configuration
+## Setup
 
-1. Copiez le fichier `env.example` vers `.env.local` :
+1. Copy the example environment file:
 ```bash
-cp env.example .env.local
+cp .env.example .env
 ```
 
-2. Configurez vos identifiants Amadeus dans `.env.local` :
+2. Configure your Amadeus credentials in `.env`:
 ```env
 AMADEUS_CLIENT_ID=your_amadeus_client_id_here
 AMADEUS_CLIENT_SECRET=your_amadeus_client_secret_here
 AMADEUS_HOSTNAME=test
 ```
 
-3. Obtenez vos identifiants sur [Amadeus for Developers](https://developers.amadeus.com/)
+3. Get your credentials from [Amadeus for Developers](https://developers.amadeus.com/)
 
 ## Installation
 
@@ -32,65 +32,65 @@ AMADEUS_HOSTNAME=test
 pnpm install
 ```
 
-## Développement
+## Development
 
 ```bash
 pnpm dev
 ```
 
-Le serveur sera disponible sur [http://localhost:3000](http://localhost:3000).
+The server will be available at [http://localhost:3000](http://localhost:3000).
 
-## Outils MCP disponibles
+## Available MCP Tools
 
 ### 1. search_flights
-Recherche de vols entre deux aéroports avec filtres.
+Search for flights between two airports with filters.
 
-**Paramètres :**
-- `origin` : Code IATA de l'aéroport de départ (3 lettres)
-- `destination` : Code IATA de l'aéroport d'arrivée (3 lettres)
-- `departureDate` : Date de départ (YYYY-MM-DD)
-- `returnDate` : Date de retour optionnelle (YYYY-MM-DD)
-- `adults` : Nombre d'adultes (1-9, défaut: 1)
-- `children` : Nombre d'enfants (0-9, défaut: 0)
-- `infants` : Nombre de bébés (0-9, défaut: 0)
-- `travelClass` : Classe de voyage (ECONOMY, PREMIUM_ECONOMY, BUSINESS, FIRST)
-- `nonStop` : Vols directs uniquement (boolean, défaut: false)
-- `maxPrice` : Prix maximum (optionnel)
-- `currency` : Code devise (défaut: EUR)
+**Parameters:**
+- `origin`: Origin airport IATA code (3 letters)
+- `destination`: Destination airport IATA code (3 letters)
+- `departureDate`: Departure date (YYYY-MM-DD)
+- `returnDate`: Optional return date (YYYY-MM-DD)
+- `adults`: Number of adults (1-9, default: 1)
+- `children`: Number of children (0-9, default: 0)
+- `infants`: Number of infants (0-9, default: 0)
+- `travelClass`: Travel class (ECONOMY, PREMIUM_ECONOMY, BUSINESS, FIRST)
+- `nonStop`: Non-stop flights only (boolean, default: false)
+- `maxPrice`: Maximum price filter (optional)
+- `currency`: Currency code (default: EUR)
 
 ### 2. analyze_flight_prices
-Analyse des prix et prédictions pour une route.
+Get flight price analysis and predictions for a route.
 
-**Paramètres :**
-- `origin` : Code IATA de l'aéroport de départ
-- `destination` : Code IATA de l'aéroport d'arrivée
-- `departureDate` : Date de départ (YYYY-MM-DD)
-- `currency` : Code devise (défaut: EUR)
+**Parameters:**
+- `origin`: Origin airport IATA code
+- `destination`: Destination airport IATA code
+- `departureDate`: Departure date (YYYY-MM-DD)
+- `currency`: Currency code (default: EUR)
 
 ### 3. search_airports
-Recherche d'aéroports par nom, ville ou code IATA.
+Search for airports by name, city, or IATA code.
 
-**Paramètres :**
-- `keyword` : Nom d'aéroport, ville ou code IATA
-- `countryCode` : Code pays pour filtrer (optionnel)
+**Parameters:**
+- `keyword`: Airport name, city name, or IATA code
+- `countryCode`: Country code to filter results (optional)
 
 ### 4. get_airline_info
-Informations sur les compagnies aériennes.
+Get information about airlines by their IATA codes.
 
-**Paramètres :**
-- `airlineCodes` : Codes IATA des compagnies séparés par des virgules (ex: "AF,KL,LH")
+**Parameters:**
+- `airlineCodes`: Comma-separated airline IATA codes (e.g., "AF,KL,LH")
 
 ### 5. search_hotels
-Recherche d'hôtels dans une ville.
+Search for hotels in a specific city.
 
-**Paramètres :**
-- `cityCode` : Code IATA de la ville
-- `checkInDate` : Date d'arrivée (YYYY-MM-DD)
-- `checkOutDate` : Date de départ (YYYY-MM-DD)
-- `adults` : Nombre d'adultes (1-9, défaut: 1)
-- `roomQuantity` : Nombre de chambres (1-8, défaut: 1)
-- `currency` : Code devise (défaut: EUR)
-- `bestRateOnly` : Meilleur tarif uniquement (défaut: true)
+**Parameters:**
+- `cityCode`: City IATA code
+- `checkInDate`: Check-in date (YYYY-MM-DD)
+- `checkOutDate`: Check-out date (YYYY-MM-DD)
+- `adults`: Number of adults (1-9, default: 1)
+- `roomQuantity`: Number of rooms (1-8, default: 1)
+- `currency`: Currency code (default: EUR)
+- `bestRateOnly`: Return only best rate per hotel (default: true)
 
 ## Architecture
 
@@ -98,32 +98,32 @@ Recherche d'hôtels dans une ville.
 ├── app/
 │   ├── api/
 │   │   └── [transport]/
-│   │       └── route.ts          # Handler MCP principal
-│   └── page.tsx                  # Page d'accueil
+│   │       └── route.ts          # Main MCP handler
+│   └── page.tsx                  # Dashboard page
 ├── lib/
 │   ├── tools/
-│   │   └── amadeus.ts           # Client Amadeus
+│   │   └── amadeus.ts           # Amadeus client
 │   ├── types/
-│   │   └── amadeus.ts           # Types et schémas Zod
+│   │   └── amadeus.ts           # Zod schemas and types
 │   └── usage/
-│       └── logger.ts            # Logger pour les usages
+│       └── logger.ts            # Usage logger
 ├── types/
-│   └── amadeus.d.ts             # Déclarations TypeScript pour Amadeus
-└── env.example                  # Variables d'environnement exemple
+│   └── amadeus.d.ts             # TypeScript declarations for Amadeus
+└── .env.example                 # Environment variables example
 ```
 
-## Technologies utilisées
+## Tech Stack
 
-- **Next.js 15** : Framework React
-- **TypeScript** : Typage statique
-- **Zod** : Validation des schémas
-- **mcp-handler** : Gestion du protocole MCP
-- **Amadeus SDK** : API Amadeus
-- **pnpm** : Gestionnaire de paquets
+- **Next.js 15**: React framework
+- **TypeScript**: Static typing
+- **Zod**: Schema validation
+- **mcp-handler**: MCP protocol handling
+- **Amadeus SDK**: Amadeus API integration
+- **pnpm**: Package manager
 
-## Déploiement
+## Deployment
 
-Le projet peut être déployé sur Vercel, Netlify ou tout autre plateforme supportant Next.js.
+The project can be deployed on Vercel, Netlify, or any platform supporting Next.js.
 
 ```bash
 pnpm build
