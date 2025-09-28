@@ -1,0 +1,11 @@
+{
+  "name": "building-agentic-ai-apps",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@10.14.0",
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm -r --parallel dev",
+    "lint": "pnpm -r lint"
+  }
+}
