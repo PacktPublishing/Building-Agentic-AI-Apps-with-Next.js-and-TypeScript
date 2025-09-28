@@ -14,7 +14,7 @@ A modern, full-stack Next.js application built with TypeScript, Tailwind CSS, an
 
 ## Project Structure
 
-\`\`\`
+```
 app/                    # Next.js App Router (main structure)
 ├── dashboard/          # Dashboard pages with layout
 ├── globals.css         # Global styles
@@ -26,7 +26,7 @@ src/                    # Source files
 │   ├── ui/            # Base UI components (Button, Card, etc.)
 │   └── dashboard/     # Dashboard-specific components
 └── lib/               # Utility functions
-\`\`\`
+```
 
 ## Getting Started
 
@@ -38,28 +38,28 @@ src/                    # Source files
 ### Installation & Setup
 
 1. **Clone and install dependencies:**
-   \`\`\`bash
+```bash
    npm install
    # or
    yarn install
    # or
    pnpm install
-   \`\`\`
+```
 
 2. **Environment setup:**
-   \`\`\`bash
+```bash
    cp .env.example .env.local
-   \`\`\`
+```
    Edit `.env.local` and add your environment variables.
 
 3. **Start development server:**
-   \`\`\`bash
+```bash
    npm run dev
    # or
    yarn dev
    # or
    pnpm dev
-   \`\`\`
+```
 
 4. **Open your browser:**
    Navigate to [http://localhost:3000](http://localhost:3000)
@@ -74,12 +74,12 @@ src/                    # Source files
 
 #### Issue: Import path errors (`@/` not resolving)
 **Solution:** The tsconfig.json is configured with:
-\`\`\`json
+```json
 "paths": {
   "@/*": ["./src/*"],
   "@/app/*": ["./app/*"]
 }
-\`\`\`
+```
 
 #### Issue: Tailwind styles not loading
 **Solution:** Make sure `app/globals.css` is imported in `app/layout.tsx`
@@ -115,14 +115,14 @@ The application uses Zustand for state management with the following stores:
 ### Manual Deployment
 
 1. Build the application:
-   \`\`\`bash
+```bash
    npm run build
-   \`\`\`
+```
 
 2. Start the production server:
-   \`\`\`bash
+```bash
    npm run start
-   \`\`\`
+```
 
 ## Environment Variables
 
