@@ -8,8 +8,9 @@
     "lint": "next lint",
     "start": "next start",
     "db:generate": "drizzle-kit generate",
-    "db:push": "NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit push",
-    "db:studio": "NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit studio"
+    "db:migrate": "powershell -Command \"$env:NODE_TLS_REJECT_UNAUTHORIZED='0'; drizzle-kit migrate\"",
+    "db:push": "powershell -Command \"$env:NODE_TLS_REJECT_UNAUTHORIZED='0'; drizzle-kit push\"",
+    "db:studio": "powershell -Command \"$env:NODE_TLS_REJECT_UNAUTHORIZED='0'; drizzle-kit studio\""
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
