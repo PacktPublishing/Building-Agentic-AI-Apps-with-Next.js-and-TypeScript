@@ -1,16 +1,12 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from "pg";
 import * as schema from './schema';
 
-// Utilise l'URL pooling pour l'application (meilleure performance)
-const connectionString = process.env.POSTGRES_URL!;
-
-// Configuration pour Supabase
-const client = postgres(connectionString, { 
-  prepare: false,
-  ssl: 'require'
+const pool = new Pool({
+  connectionString: process.env.POSTGRES_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
-export const db = drizzle(client, { schema });
-
-export * from './schema';
+export const db = drizzle(pool, { schema });
