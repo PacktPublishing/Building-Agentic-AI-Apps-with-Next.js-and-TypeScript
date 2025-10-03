@@ -1,0 +1,12 @@
+{
+  "projects": [
+    {
+      "name": "mcp-amadeus",
+      "source": "mcp-amadeus"
+    },
+    {
+      "name": "travel-ai",
+      "source": "travel-ai"
+    }
+  ]
+}
