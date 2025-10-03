@@ -6,8 +6,5 @@ export default defineConfig({
   dialect: "postgresql",
   dbCredentials: {
     url: process.env.POSTGRES_URL_NON_POOLING!,
-    ssl: {
-      rejectUnauthorized: false
-    }
   },
 });
