@@ -57,13 +57,22 @@ export async function PUT(
     const session = await requireAuth();
     const body = await request.json();
     
-    // Validate input
+    // Validate input with the current user context
     const validatedData = updateTripSchema.parse({
       ...body,
       id: params.id,
+      userId: session.user.id,
     });
     
-    const updatedTrip = await TripService.updateTrip(validatedData);
+    const updatedTrip = await TripService.updateTrip({
+      id: validatedData.id,
+      userId: validatedData.userId,
+      title: validatedData.title,
+      destination: validatedData.destination,
+      startDate: validatedData.startDate,
+      endDate: validatedData.endDate,
+      budget: validatedData.budget,
+    });
     
     if (!updatedTrip) {
       return NextResponse.json(
