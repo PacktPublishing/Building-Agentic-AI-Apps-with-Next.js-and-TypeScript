@@ -46,31 +46,50 @@ class MyFirstAgent {
             return;
         }
 
-        // Initialize MCP client with multiple servers
-        // TEMPORARILY DISABLED: Amadeus tools are too large (216k tokens)
-        // this.mcpClient = new MultiServerMCPClient({  
-        //     amadeus: {
-        //         transport: "http",
-        //         url: config.amadeus_url,
-        //         headers: {
-        //             "Authorization": `Bearer ${config.amadeus_bearer_token}`
-        //         }
-        //     },
-        // });
 
-        // Load tools from MCP servers
-        // const mcpTools = await this.mcpClient.getTools();
-        // this.tools = [...mcpTools];
+        this.mcpClient = new MultiServerMCPClient({  
+            amadeus: {
+                transport: "http",
+                url: config.amadeus_url,
+                headers: {
+                    "Authorization": `Bearer ${config.amadeus_bearer_token}`
+                }
+            },
+        });
+
+
+        const mcpTools = await this.mcpClient.getTools();
+        this.tools = [...mcpTools];
         
-        // For now, use no tools to test the basic flow
-        this.tools = [];
+        this.tools = [ ...mcpTools ];
 
-        // Create the ReAct agent with loaded tools
+        // Create the ReAct agent with loaded tools and custom prompt
+        const systemPrompt = `You are a helpful travel assistant. Answer questions as best you can. You have access to the following tools:
+
+{tools}
+
+Use the following format:
+
+Question: the input question you must answer
+Thought: you should always think about what to do
+Action: the action to take, should be one of [{tool_names}]
+Action Input: the input to the action
+Observation: the result of the action
+... (this Thought/Action/Action Input/Observation can repeat N times)
+Thought: I now know the final answer
+Final Answer: the final answer to the original input question
+
+Begin!
+
+Question: {input}
+Thought:`;
+
         this.graph = createReactAgent({
             llm: this.model,
             tools: this.tools,
             checkpointSaver: this.memory,
-            interruptBefore: config.is_interrupt ? ["tools"] : []
+           // interruptBefore: config.is_interrupt ? ["tools"] : [],
+            messageModifier: systemPrompt
         });
 
         this.isInitialized = true;
