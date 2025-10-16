@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { v4 as uuidv4 } from 'uuid';
 import { MyFirstAgent } from '../../../../ai/agents/agent';
 import { ChatRequest, SSEEvent } from '../types';
 
@@ -10,7 +11,7 @@ import { ChatRequest, SSEEvent } from '../types';
 export async function POST(request: NextRequest) {
     try {
         const body: ChatRequest = await request.json();
-        const { message, threadId, userId } = body;
+        const { message, threadId } = body;
 
         if (!message || typeof message !== 'string') {
             return new Response(
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Generate thread ID if not provided
-        const finalThreadId = threadId || `thread-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+        const finalThreadId = threadId || uuidv4();
 
         // Create a ReadableStream for SSE
         const encoder = new TextEncoder();

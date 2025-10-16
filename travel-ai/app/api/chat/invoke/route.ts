@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { v4 as uuidv4 } from 'uuid';
 import { MyFirstAgent } from '../../../../ai/agents/agent';
 import { ChatRequest, ChatResponse } from '../types';
 
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Generate thread ID if not provided
-        const finalThreadId = threadId || `thread-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+        const finalThreadId = threadId || uuidv4();
 
         // Initialize the agent
         const agent = MyFirstAgent.getInstance();
