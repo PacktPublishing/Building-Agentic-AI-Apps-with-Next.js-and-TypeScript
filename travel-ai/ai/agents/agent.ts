@@ -238,14 +238,37 @@ Thought:`;
         const config = { configurable: { thread_id: threadId } };
         const stream = await this.graph.stream(
             { messages: [{ role: "user", content: message }] },
-            config
+            config,
+            { streamMode: "values" }
         );
 
+        let lastContent = '';
         for await (const chunk of stream) {
-            if (chunk.agent?.messages) {
-                for (const msg of chunk.agent.messages) {
-                    if (msg.content) {
-                        yield msg.content;
+            console.log('Stream chunk keys:', Object.keys(chunk));
+            
+            // LangGraph streams with 'agent' key containing messages
+            const messages = chunk.agent?.messages || chunk.messages;
+            
+            if (messages && Array.isArray(messages)) {
+                const lastMsg = messages[messages.length - 1];
+                if (lastMsg && (lastMsg.type === 'ai' || lastMsg._getType?.() === 'ai')) {
+                    let content = typeof lastMsg.content === 'string' 
+                        ? lastMsg.content 
+                        : Array.isArray(lastMsg.content) 
+                            ? lastMsg.content.map((c: any) => c.text || '').join('')
+                            : '';
+                    
+                    // Only yield if content changed (avoid duplicates)
+                    if (content && content !== lastContent) {
+                        // Extract Final Answer if present
+                        const finalAnswerMatch = content.match(/Final Answer:\s*([\s\S]*)/);
+                        if (finalAnswerMatch) {
+                            content = finalAnswerMatch[1].trim();
+                        }
+                        
+                        console.log('Yielding content:', content.substring(0, 100));
+                        lastContent = content;
+                        yield content;
                     }
                 }
             }
