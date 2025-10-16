@@ -37,18 +37,20 @@ export async function POST(request: NextRequest) {
 
                     sendEvent({ type: 'start', data: { threadId: finalThreadId } });
 
-                    // Use the agent's stream method for real-time streaming
-                    let fullResponse = '';
+                    // Invoke the agent and get the final response
+                    const response = await agent.invoke(message, finalThreadId);
                     
-                    for await (const chunk of agent.stream(message, finalThreadId)) {
-                        if (chunk && typeof chunk === 'string') {
-                            fullResponse += chunk;
-                            
-                            // Stream each chunk as it arrives
+                    // Stream the response word by word for better UX
+                    if (response && typeof response === 'string') {
+                        const words = response.split(' ');
+                        for (let i = 0; i < words.length; i++) {
+                            const word = words[i];
                             sendEvent({
                                 type: 'token',
-                                data: { content: chunk }
+                                data: { content: word + (i < words.length - 1 ? ' ' : '') }
                             });
+                            // Small delay for streaming effect
+                            await new Promise(resolve => setTimeout(resolve, 30));
                         }
                     }
 
@@ -57,7 +59,7 @@ export async function POST(request: NextRequest) {
                         type: 'complete',
                         data: {
                             threadId: finalThreadId,
-                            response: fullResponse
+                            response: response || ''
                         }
                     });
 

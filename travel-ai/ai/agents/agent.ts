@@ -85,11 +85,44 @@ class MyFirstAgent {
     async invoke(message: string, threadId: string = "default") {
         this.ensureInitialized();
         const config = { configurable: { thread_id: threadId } };
-        const result = await this.graph.invoke(
+        
+        // First invocation with the user message
+        let result = await this.graph.invoke(
             { messages: [{ role: "user", content: message }] },
             config
         );
-        return result.messages[result.messages.length - 1].content;
+        
+        console.log('Initial invoke result messages:', result.messages.map((m: any) => ({
+            type: m.type || m._getType?.(),
+            content: m.content?.substring(0, 100),
+            hasToolCalls: !!m.tool_calls
+        })));
+        
+        // Check if we need to continue (if last message has tool calls but no content)
+        let lastMsg = result.messages[result.messages.length - 1];
+        if (lastMsg.tool_calls && !lastMsg.content) {
+            console.log('Tool calls detected, continuing execution...');
+            // Continue execution to get the final response after tool execution
+            result = await this.graph.invoke(null, config);
+            console.log('After continuation:', result.messages.map((m: any) => ({
+                type: m.type || m._getType?.(),
+                content: m.content?.substring(0, 100),
+                hasToolCalls: !!m.tool_calls
+            })));
+        }
+        
+        // Find the last AI message with content
+        for (let i = result.messages.length - 1; i >= 0; i--) {
+            const msg = result.messages[i];
+            if ((msg.type === 'ai' || msg._getType?.() === 'ai') && msg.content) {
+                console.log('Found AI message with content:', msg.content.substring(0, 100));
+                return msg.content;
+            }
+        }
+        
+        // Fallback
+        console.log('No AI message found, returning last message');
+        return result.messages[result.messages.length - 1].content || '';
     }
 
     async getState(threadId: string = "default") {
