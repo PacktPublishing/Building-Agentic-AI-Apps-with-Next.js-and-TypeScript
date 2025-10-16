@@ -66,7 +66,7 @@ class MyFirstAgent {
             llm: this.model,
             tools: this.tools,
             checkpointSaver: this.memory,
-            interruptBefore: ["tools"]
+            interruptBefore: config.is_interrupt ? ["tools"] : []
         });
 
         this.isInitialized = true;

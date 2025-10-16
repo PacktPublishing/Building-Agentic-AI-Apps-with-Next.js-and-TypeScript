@@ -1,25 +1,73 @@
 # Chat API
 
-API simplifiée pour interagir avec l'agent de voyage via streaming SSE. L'agent gère automatiquement les outils sans nécessiter d'approbation.
+Deux approches pour interagir avec l'agent de voyage : **invocation classique** et **streaming SSE**.
 
-## Route
+---
 
-### POST `/api/chat/start`
+## 🔹 Route 1: POST `/api/chat/invoke`
 
-Démarre ou continue une conversation avec l'agent.
+**Invocation classique** - Attend la réponse complète avant de retourner.
 
-**Request Body:**
+### Quand l'utiliser ?
+- Vous n'avez pas besoin de streaming en temps réel
+- Vous voulez une réponse complète d'un coup
+- Intégration simple dans des systèmes existants
+
+### Request Body
 ```typescript
 {
   message: string;      // Le message de l'utilisateur
-  threadId?: string;    // ID du thread (optionnel, pour continuer une conversation)
+  threadId?: string;    // ID du thread (optionnel)
   userId?: string;      // ID de l'utilisateur (optionnel)
 }
 ```
 
-**Response:** Server-Sent Events (SSE)
+### Response
+```typescript
+{
+  threadId: string;     // ID du thread de conversation
+  response: string;     // Réponse complète de l'agent
+}
+```
 
-**Types d'événements SSE:**
+### Exemple
+```bash
+curl -X POST http://localhost:3000/api/chat/invoke \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Hello! I want to visit Paris"}'
+```
+
+**Réponse:**
+```json
+{
+  "threadId": "thread-1234567890-abc123",
+  "response": "That sounds wonderful! Paris is a beautiful city..."
+}
+```
+
+---
+
+## 🔹 Route 2: POST `/api/chat/stream`
+
+**Server-Sent Events (SSE)** - Streaming en temps réel de la réponse.
+
+### Quand l'utiliser ?
+- Vous voulez une meilleure UX avec affichage progressif
+- Application web interactive (chat UI)
+- Feedback immédiat à l'utilisateur
+
+### Request Body
+```typescript
+{
+  message: string;      // Le message de l'utilisateur
+  threadId?: string;    // ID du thread (optionnel)
+  userId?: string;      // ID de l'utilisateur (optionnel)
+}
+```
+
+### Response: Server-Sent Events
+
+**Types d'événements:**
 
 1. **start** - Début du stream
 ```json
@@ -37,18 +85,7 @@ Démarre ou continue une conversation avec l'agent.
 }
 ```
 
-3. **toolCall** - Appel d'outil (informatif)
-```json
-{
-  "type": "toolCall",
-  "data": {
-    "name": "search_flights",
-    "args": { "from": "Paris", "to": "NYC" }
-  }
-}
-```
-
-4. **complete** - Fin du stream
+3. **complete** - Fin du stream
 ```json
 {
   "type": "complete",
@@ -59,7 +96,7 @@ Démarre ou continue une conversation avec l'agent.
 }
 ```
 
-5. **error** - Erreur
+4. **error** - Erreur
 ```json
 {
   "type": "error",
@@ -70,50 +107,84 @@ Démarre ou continue une conversation avec l'agent.
 }
 ```
 
----
-
-## Exemples d'utilisation
-
-### 1. Nouvelle conversation
-
+### Exemple
 ```bash
-curl -X POST http://localhost:3000/api/chat/start \
+curl -X POST http://localhost:3000/api/chat/stream \
   -H "Content-Type: application/json" \
-  -d '{
-    "message": "I want to visit Paris"
-  }' \
+  -d '{"message": "Hello! I want to visit Paris"}' \
   --no-buffer
 ```
 
-### 2. Continuer une conversation
-
-```bash
-curl -X POST http://localhost:3000/api/chat/start \
-  -H "Content-Type: application/json" \
-  -d '{
-    "message": "Tell me more about the Eiffel Tower",
-    "threadId": "thread-1234567890-abc123"
-  }' \
-  --no-buffer
+**Stream SSE:**
 ```
+data: {"type":"start","data":{"threadId":"thread-123"}}
 
-### 3. Avec recherche d'outils
+data: {"type":"token","data":{"content":"That "}}
 
-```bash
-curl -X POST http://localhost:3000/api/chat/start \
-  -H "Content-Type: application/json" \
-  -d '{
-    "message": "Search for flights from Paris to New York for November 2025"
-  }' \
-  --no-buffer
+data: {"type":"token","data":{"content":"sounds "}}
+
+data: {"type":"token","data":{"content":"wonderful!"}}
+
+data: {"type":"complete","data":{"threadId":"thread-123","response":"That sounds wonderful!"}}
 ```
 
 ---
 
-## Utilisation en JavaScript
+## 📊 Comparaison
 
+| Caractéristique | `/api/chat/invoke` | `/api/chat/stream` |
+|----------------|-------------------|-------------------|
+| **Type** | Request/Response classique | Server-Sent Events |
+| **Latence** | Attend la réponse complète | Streaming progressif |
+| **UX** | Simple, direct | Meilleure (feedback immédiat) |
+| **Complexité** | Faible | Moyenne |
+| **Use case** | APIs, backends, scripts | UIs web, chat interfaces |
+
+---
+
+## 🔄 Continuer une conversation
+
+Les deux routes supportent la continuation de conversation via `threadId` :
+
+```bash
+# Première requête
+curl -X POST http://localhost:3000/api/chat/invoke \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Hello!"}'
+
+# Réponse: {"threadId": "thread-123", "response": "..."}
+
+# Requête suivante avec le même threadId
+curl -X POST http://localhost:3000/api/chat/invoke \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Tell me more",
+    "threadId": "thread-123"
+  }'
+```
+
+---
+
+## 💻 Utilisation en JavaScript
+
+### Invoke classique
 ```javascript
-const response = await fetch('/api/chat/start', {
+const response = await fetch('/api/chat/invoke', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    message: 'Hello!',
+    threadId: existingThreadId // optionnel
+  })
+});
+
+const data = await response.json();
+console.log(data.response);
+```
+
+### Stream SSE
+```javascript
+const response = await fetch('/api/chat/stream', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -154,55 +225,54 @@ while (true) {
 
 ---
 
-## Tests
+## ⚙️ Configuration
 
-```bash
-# Démarrer le serveur
-pnpm dev
-
-# Dans un autre terminal
-TEST_BASE_URL=http://localhost:3000 pnpm test src/app/api/chat/chat.test.ts
-```
-
----
-
-## Interface de test
-
-Une interface web de test est disponible :
-
-```bash
-pnpm dev
-open http://localhost:3000/test-chat
-```
-
----
-
-## Fonctionnalités
-
-- ✅ **Streaming en temps réel** : Réponses progressives via SSE
-- ✅ **Gestion automatique des outils** : L'agent utilise les outils sans approbation
-- ✅ **Conversations persistantes** : Utilisez le `threadId` pour continuer
-- ✅ **TypeScript strict** : Types complets pour une intégration facile
-
----
-
-## Variables d'environnement
-
+### Variables d'environnement
 ```bash
 # OpenAI
 OPENAI_API_KEY=sk-...
 
-# Amadeus MCP
+# Amadeus MCP (optionnel)
 AMADEUS_URL=https://mcp-amadeus.vercel.app/api/mcp
 AMADEUS_BEARER_TOKEN=...
+
+# Interrupt mode (pour tests HITL)
+IS_INTERRUPT=false
 ```
 
 ---
 
-## Architecture
+## 🧪 Tests
+
+```bash
+# Test invoke
+curl -X POST http://localhost:3000/api/chat/invoke \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Hello!"}'
+
+# Test stream
+curl -X POST http://localhost:3000/api/chat/stream \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Hello!"}' \
+  --no-buffer
+```
+
+---
+
+## 🎯 Recommandations
+
+- **Pour des APIs backend** → Utilisez `/api/chat/invoke`
+- **Pour des interfaces web** → Utilisez `/api/chat/stream`
+- **Pour des scripts/CLI** → Utilisez `/api/chat/invoke`
+- **Pour un chat UI** → Utilisez `/api/chat/stream`
+
+---
+
+## 🔧 Architecture
 
 ```
-User → POST /api/chat/start → Agent → Tools (automatic) → SSE Stream → User
+User → POST /api/chat/invoke → Agent → Response complète
+User → POST /api/chat/stream → Agent → SSE Stream → Tokens progressifs
 ```
 
 L'agent gère automatiquement :
@@ -210,5 +280,3 @@ L'agent gère automatiquement :
 - L'exécution des outils
 - L'agrégation des résultats
 - La génération de la réponse finale
-
-Tout est transparent pour l'utilisateur qui reçoit simplement la réponse finale en streaming.

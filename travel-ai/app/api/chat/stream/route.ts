@@ -3,8 +3,9 @@ import { MyFirstAgent } from '../../../../ai/agents/agent';
 import { ChatRequest, SSEEvent } from '../types';
 
 /**
- * POST /api/chat/start
- * Start or continue a chat conversation with streaming via SSE
+ * POST /api/chat/stream
+ * Server-Sent Events streaming - real-time response streaming
+ * Use this for better UX with progressive response display
  */
 export async function POST(request: NextRequest) {
     try {
@@ -88,10 +89,10 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error) {
-        console.error('Error in /api/chat/start:', error);
+        console.error('Error in /api/chat/stream:', error);
         return new Response(
             JSON.stringify({
-                error: 'Failed to start chat',
+                error: 'Failed to start stream',
                 details: error instanceof Error ? error.message : 'Unknown error'
             }),
             { status: 500, headers: { 'Content-Type': 'application/json' } }
