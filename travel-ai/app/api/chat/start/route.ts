@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { MyFirstAgent } from '../../../../../ai/agents/agent';
+import { MyFirstAgent } from '../../../../ai/agents/agent';
 import { ChatRequest, SSEEvent } from '../types';
 
 /**
