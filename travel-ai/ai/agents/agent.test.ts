@@ -106,7 +106,7 @@ describe("MyFirstAgent - ReAct Agent with HITL", () => {
             log("─".repeat(70));
             
             const threadId = "test-thread-hitl-1";
-            const message = "Can you search for the weather in Paris?";
+            const message = "Can you search a good activities in Paris?";
 
             log("👤 User:", message);
             log("🤖 Agent: Analyzing if tools are needed...");
@@ -143,7 +143,8 @@ describe("MyFirstAgent - ReAct Agent with HITL", () => {
             log("─".repeat(70));
             
             const threadId = "test-thread-hitl-2";
-            const message = "Search for information about flights from Paris to New York";
+            // Change the date if you come from the future
+            const message = "Search for information about flights from Paris to New York for November 2025";
 
             // Step 1: Invoke with approval
             log("STEP 1: User request");

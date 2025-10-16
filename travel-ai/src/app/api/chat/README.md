@@ -1,54 +1,19 @@
-# Chat API Routes
+# Chat API
 
-API routes pour interagir avec l'agent de voyage via un système de chat avec streaming SSE.
+API simplifiée pour interagir avec l'agent de voyage via streaming SSE. L'agent gère automatiquement les outils sans nécessiter d'approbation.
 
-## Routes disponibles
+## Route
 
 ### POST `/api/chat/start`
 
-Démarre une nouvelle conversation avec l'agent.
+Démarre ou continue une conversation avec l'agent.
 
 **Request Body:**
 ```typescript
 {
   message: string;      // Le message de l'utilisateur
-  userId?: string;      // ID optionnel de l'utilisateur
-}
-```
-
-**Response:**
-```typescript
-{
-  threadId: string;                    // ID unique du thread de conversation
-  requiresApproval: boolean;           // Si l'agent nécessite une approbation
-  response?: string;                   // Réponse directe de l'agent
-  toolCalls?: Array<{                  // Outils que l'agent veut utiliser
-    id: string;
-    name: string;
-    args: Record<string, any>;
-  }>;
-}
-```
-
-**Exemple:**
-```bash
-curl -X POST http://localhost:3000/api/chat/start \
-  -H "Content-Type: application/json" \
-  -d '{"message": "I want to visit Paris"}'
-```
-
----
-
-### POST `/api/chat/continue`
-
-Continue une conversation existante avec streaming SSE.
-
-**Request Body:**
-```typescript
-{
-  threadId: string;     // ID du thread de conversation
-  approved: boolean;    // Si l'utilisateur approuve les tool calls
-  message?: string;     // Nouveau message optionnel
+  threadId?: string;    // ID du thread (optionnel, pour continuer une conversation)
+  userId?: string;      // ID de l'utilisateur (optionnel)
 }
 ```
 
@@ -72,7 +37,7 @@ Continue une conversation existante avec streaming SSE.
 }
 ```
 
-3. **toolCall** - Appel d'outil
+3. **toolCall** - Appel d'outil (informatif)
 ```json
 {
   "type": "toolCall",
@@ -83,26 +48,18 @@ Continue une conversation existante avec streaming SSE.
 }
 ```
 
-4. **toolResult** - Résultat d'un outil
-```json
-{
-  "type": "toolResult",
-  "data": { "result": "..." }
-}
-```
-
-5. **complete** - Fin du stream
+4. **complete** - Fin du stream
 ```json
 {
   "type": "complete",
   "data": {
-    "response": "Full response text",
-    "requiresApproval": false
+    "threadId": "thread-123",
+    "response": "Full response text"
   }
 }
 ```
 
-6. **error** - Erreur
+5. **error** - Erreur
 ```json
 {
   "type": "error",
@@ -113,14 +70,55 @@ Continue une conversation existante avec streaming SSE.
 }
 ```
 
-**Exemple JavaScript:**
+---
+
+## Exemples d'utilisation
+
+### 1. Nouvelle conversation
+
+```bash
+curl -X POST http://localhost:3000/api/chat/start \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "I want to visit Paris"
+  }' \
+  --no-buffer
+```
+
+### 2. Continuer une conversation
+
+```bash
+curl -X POST http://localhost:3000/api/chat/start \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Tell me more about the Eiffel Tower",
+    "threadId": "thread-1234567890-abc123"
+  }' \
+  --no-buffer
+```
+
+### 3. Avec recherche d'outils
+
+```bash
+curl -X POST http://localhost:3000/api/chat/start \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Search for flights from Paris to New York for November 2025"
+  }' \
+  --no-buffer
+```
+
+---
+
+## Utilisation en JavaScript
+
 ```javascript
-const response = await fetch('/api/chat/continue', {
+const response = await fetch('/api/chat/start', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
-    threadId: 'thread-123',
-    approved: true
+    message: 'Hello!',
+    threadId: existingThreadId // optionnel
   })
 });
 
@@ -137,7 +135,18 @@ while (true) {
   for (const line of lines) {
     if (line.startsWith('data: ')) {
       const event = JSON.parse(line.substring(6));
-      console.log(event.type, event.data);
+      
+      switch (event.type) {
+        case 'start':
+          console.log('Thread ID:', event.data.threadId);
+          break;
+        case 'token':
+          process.stdout.write(event.data.content);
+          break;
+        case 'complete':
+          console.log('\nDone!');
+          break;
+      }
     }
   }
 }
@@ -145,92 +154,61 @@ while (true) {
 
 ---
 
-## Workflow typique
-
-### 1. Conversation simple (sans approbation)
-
-```javascript
-// 1. Démarrer la conversation
-const startRes = await fetch('/api/chat/start', {
-  method: 'POST',
-  body: JSON.stringify({ message: 'Hello!' })
-});
-const { threadId, response } = await startRes.json();
-
-// 2. Continuer avec un nouveau message
-const continueRes = await fetch('/api/chat/continue', {
-  method: 'POST',
-  body: JSON.stringify({
-    threadId,
-    approved: false,
-    message: 'Tell me more'
-  })
-});
-// Lire le stream SSE...
-```
-
-### 2. Conversation avec approbation d'outils
-
-```javascript
-// 1. Démarrer avec une requête nécessitant des outils
-const startRes = await fetch('/api/chat/start', {
-  method: 'POST',
-  body: JSON.stringify({
-    message: 'Search flights from Paris to NYC'
-  })
-});
-const { threadId, requiresApproval, toolCalls } = await startRes.json();
-
-// 2. Si requiresApproval === true, afficher les toolCalls à l'utilisateur
-if (requiresApproval) {
-  console.log('Agent wants to use:', toolCalls);
-  
-  // 3. Utilisateur approuve
-  const continueRes = await fetch('/api/chat/continue', {
-    method: 'POST',
-    body: JSON.stringify({
-      threadId,
-      approved: true  // ou false pour rejeter
-    })
-  });
-  // Lire le stream SSE...
-}
-```
-
----
-
 ## Tests
 
-Lancer les tests:
 ```bash
-pnpm test src/app/api/chat/chat.test.ts
-```
-
-Ou avec le serveur en cours d'exécution:
-```bash
-# Terminal 1
+# Démarrer le serveur
 pnpm dev
 
-# Terminal 2
+# Dans un autre terminal
 TEST_BASE_URL=http://localhost:3000 pnpm test src/app/api/chat/chat.test.ts
 ```
 
 ---
 
-## Notes techniques
+## Interface de test
 
-- **SSE vs WebSocket**: SSE est utilisé car il est unidirectionnel (serveur → client) et plus simple pour le streaming de texte
-- **Streaming**: Les tokens sont envoyés progressivement pour une meilleure UX
-- **Thread Management**: Chaque conversation a un `threadId` unique qui maintient le contexte
-- **Human-in-the-Loop**: Le système d'approbation permet à l'utilisateur de valider les actions avant exécution
+Une interface web de test est disponible :
+
+```bash
+pnpm dev
+open http://localhost:3000/test-chat
+```
 
 ---
 
-## Sécurité
+## Fonctionnalités
 
-⚠️ **Important**: En production, ajoutez:
-- Authentification (vérifier l'utilisateur)
-- Rate limiting (limiter les requêtes)
-- Validation des inputs (sanitize les messages)
-- Timeout sur les streams SSE
-- Gestion des threads par utilisateur
+- ✅ **Streaming en temps réel** : Réponses progressives via SSE
+- ✅ **Gestion automatique des outils** : L'agent utilise les outils sans approbation
+- ✅ **Conversations persistantes** : Utilisez le `threadId` pour continuer
+- ✅ **TypeScript strict** : Types complets pour une intégration facile
+
+---
+
+## Variables d'environnement
+
+```bash
+# OpenAI
+OPENAI_API_KEY=sk-...
+
+# Amadeus MCP
+AMADEUS_URL=https://mcp-amadeus.vercel.app/api/mcp
+AMADEUS_BEARER_TOKEN=...
+```
+
+---
+
+## Architecture
+
+```
+User → POST /api/chat/start → Agent → Tools (automatic) → SSE Stream → User
+```
+
+L'agent gère automatiquement :
+- La sélection des outils appropriés
+- L'exécution des outils
+- L'agrégation des résultats
+- La génération de la réponse finale
+
+Tout est transparent pour l'utilisateur qui reçoit simplement la réponse finale en streaming.

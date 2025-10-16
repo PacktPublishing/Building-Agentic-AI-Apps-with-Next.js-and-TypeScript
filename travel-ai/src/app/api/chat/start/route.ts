@@ -1,53 +1,100 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { MyFirstAgent } from '../../../../../ai/agents/agent';
-import { StartChatRequest, StartChatResponse } from '../types';
+import { ChatRequest, SSEEvent } from '../types';
 
 /**
  * POST /api/chat/start
- * Start a new chat conversation with the travel agent
+ * Start or continue a chat conversation with streaming via SSE
  */
 export async function POST(request: NextRequest) {
     try {
-        const body: StartChatRequest = await request.json();
-        const { message, userId } = body;
+        const body: ChatRequest = await request.json();
+        const { message, threadId, userId } = body;
 
         if (!message || typeof message !== 'string') {
-            return NextResponse.json(
-                { error: 'Message is required and must be a string' },
-                { status: 400 }
+            return new Response(
+                JSON.stringify({ error: 'Message is required and must be a string' }),
+                { status: 400, headers: { 'Content-Type': 'application/json' } }
             );
         }
 
-        // Initialize the agent
-        const agent = MyFirstAgent.getInstance();
-        await agent.initialize();
+        // Generate thread ID if not provided
+        const finalThreadId = threadId || `thread-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
-        // Generate a unique thread ID
-        const threadId = `thread-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+        // Create a ReadableStream for SSE
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+            async start(controller) {
+                const sendEvent = (event: SSEEvent) => {
+                    const data = `data: ${JSON.stringify(event)}\n\n`;
+                    controller.enqueue(encoder.encode(data));
+                };
 
-        // Invoke the agent
-        const result = await agent.invoke(message, threadId);
+                try {
+                    // Initialize the agent
+                    const agent = MyFirstAgent.getInstance();
+                    await agent.initialize();
 
-        const response: StartChatResponse = {
-            threadId,
-            requiresApproval: result.requiresApproval,
-            response: result.response,
-            toolCalls: result.toolCalls?.map((call: any) => ({
-                id: call.id || `call-${Date.now()}`,
-                name: call.name,
-                args: call.args
-            }))
-        };
+                    sendEvent({ type: 'start', data: { threadId: finalThreadId } });
 
-        return NextResponse.json(response);
+                    // Invoke the agent - it will handle tools automatically
+                    const result = await agent.invoke(message, finalThreadId);
+
+                    // Stream the response token by token
+                    if (result.response) {
+                        const words = result.response.split(' ');
+                        for (let i = 0; i < words.length; i++) {
+                            const word = words[i];
+                            sendEvent({
+                                type: 'token',
+                                data: { content: word + (i < words.length - 1 ? ' ' : '') }
+                            });
+                            // Small delay to simulate streaming
+                            await new Promise(resolve => setTimeout(resolve, 30));
+                        }
+                    }
+
+                    // Send completion event
+                    sendEvent({
+                        type: 'complete',
+                        data: {
+                            threadId: finalThreadId,
+                            response: result.response
+                        }
+                    });
+
+                } catch (error) {
+                    console.error('Error in SSE stream:', error);
+                    sendEvent({
+                        type: 'error',
+                        data: {
+                            error: 'Failed to process request',
+                            details: error instanceof Error ? error.message : 'Unknown error'
+                        }
+                    });
+                } finally {
+                    controller.close();
+                }
+            }
+        });
+
+        // Return SSE response
+        return new Response(stream, {
+            headers: {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+            },
+        });
+
     } catch (error) {
         console.error('Error in /api/chat/start:', error);
-        return NextResponse.json(
-            { 
+        return new Response(
+            JSON.stringify({
                 error: 'Failed to start chat',
                 details: error instanceof Error ? error.message : 'Unknown error'
-            },
-            { status: 500 }
+            }),
+            { status: 500, headers: { 'Content-Type': 'application/json' } }
         );
     }
 }

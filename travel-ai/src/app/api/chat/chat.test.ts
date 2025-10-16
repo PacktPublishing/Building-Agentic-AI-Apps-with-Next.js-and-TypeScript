@@ -1,105 +1,16 @@
-import { describe, it, expect, beforeAll } from 'vitest';
-import { StartChatRequest, StartChatResponse, ContinueChatRequest, SSEEvent } from './types';
+import { describe, it, expect } from 'vitest';
+import { ChatRequest, SSEEvent } from './types';
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3000';
 
-describe('Chat API Routes', () => {
-    let testThreadId: string;
-
+describe('Chat API', () => {
     describe('POST /api/chat/start', () => {
-        it('should start a new chat conversation', async () => {
-            const request: StartChatRequest = {
-                message: 'Hello, I want to plan a trip to Paris'
+        it('should start a new chat and stream response', async () => {
+            const request: ChatRequest = {
+                message: 'Hello! I want to plan a trip to Paris'
             };
 
             const response = await fetch(`${BASE_URL}/api/chat/start`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(request),
-            });
-
-            expect(response.ok).toBe(true);
-            const data: StartChatResponse = await response.json();
-
-            expect(data.threadId).toBeDefined();
-            expect(typeof data.threadId).toBe('string');
-            expect(data.requiresApproval).toBeDefined();
-            expect(typeof data.requiresApproval).toBe('boolean');
-
-            if (data.response) {
-                expect(typeof data.response).toBe('string');
-            }
-
-            testThreadId = data.threadId;
-            console.log('✅ Chat started with thread ID:', testThreadId);
-        }, 30000);
-
-        it('should return 400 for missing message', async () => {
-            const response = await fetch(`${BASE_URL}/api/chat/start`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({}),
-            });
-
-            expect(response.status).toBe(400);
-            const data = await response.json();
-            expect(data.error).toBeDefined();
-        });
-
-        it('should handle tool calls requiring approval', async () => {
-            const request: StartChatRequest = {
-                message: 'Search for flights from Paris to New York for November 2025'
-            };
-
-            const response = await fetch(`${BASE_URL}/api/chat/start`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(request),
-            });
-
-            expect(response.ok).toBe(true);
-            const data: StartChatResponse = await response.json();
-
-            if (data.requiresApproval) {
-                expect(data.toolCalls).toBeDefined();
-                expect(Array.isArray(data.toolCalls)).toBe(true);
-                console.log('🔧 Tool calls requiring approval:', data.toolCalls);
-            }
-        }, 30000);
-    });
-
-    describe('POST /api/chat/continue', () => {
-        beforeAll(async () => {
-            // Start a chat to get a thread ID
-            const request: StartChatRequest = {
-                message: 'What are good activities in Paris?'
-            };
-
-            const response = await fetch(`${BASE_URL}/api/chat/start`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(request),
-            });
-
-            const data: StartChatResponse = await response.json();
-            testThreadId = data.threadId;
-        });
-
-        it('should continue chat with SSE streaming', async () => {
-            const request: ContinueChatRequest = {
-                threadId: testThreadId,
-                approved: true
-            };
-
-            const response = await fetch(`${BASE_URL}/api/chat/continue`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -114,6 +25,7 @@ describe('Chat API Routes', () => {
             const reader = response.body?.getReader();
             const decoder = new TextDecoder();
             const events: SSEEvent[] = [];
+            let threadId: string | null = null;
 
             if (reader) {
                 let done = false;
@@ -131,6 +43,11 @@ describe('Chat API Routes', () => {
                                 try {
                                     const event: SSEEvent = JSON.parse(eventData);
                                     events.push(event);
+                                    
+                                    if (event.type === 'start' && event.data.threadId) {
+                                        threadId = event.data.threadId;
+                                    }
+                                    
                                     console.log('📡 SSE Event:', event.type, event.data);
                                 } catch (e) {
                                     // Ignore parse errors
@@ -144,37 +61,124 @@ describe('Chat API Routes', () => {
             expect(events.length).toBeGreaterThan(0);
             expect(events[0].type).toBe('start');
             expect(events[events.length - 1].type).toBe('complete');
+            expect(threadId).toBeDefined();
+            console.log('✅ Thread ID:', threadId);
         }, 30000);
 
-        it('should return 400 for missing thread ID', async () => {
-            const response = await fetch(`${BASE_URL}/api/chat/continue`, {
+        it('should continue conversation with existing threadId', async () => {
+            // First message
+            const request1: ChatRequest = {
+                message: 'Hello!'
+            };
+
+            const response1 = await fetch(`${BASE_URL}/api/chat/start`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ approved: true }),
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(request1),
+            });
+
+            const reader1 = response1.body?.getReader();
+            const decoder = new TextDecoder();
+            let threadId: string | null = null;
+
+            if (reader1) {
+                while (true) {
+                    const { value, done } = await reader1.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const event: SSEEvent = JSON.parse(line.substring(6));
+                                if (event.type === 'start' && event.data.threadId) {
+                                    threadId = event.data.threadId;
+                                }
+                            } catch (e) {
+                                // Ignore
+                            }
+                        }
+                    }
+                }
+            }
+
+            expect(threadId).toBeDefined();
+
+            // Second message with same threadId
+            const request2: ChatRequest = {
+                message: 'Tell me more about Paris',
+                threadId: threadId!
+            };
+
+            const response2 = await fetch(`${BASE_URL}/api/chat/start`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(request2),
+            });
+
+            expect(response2.ok).toBe(true);
+            console.log('✅ Continued conversation with thread:', threadId);
+        }, 30000);
+
+        it('should return 400 for missing message', async () => {
+            const response = await fetch(`${BASE_URL}/api/chat/start`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({}),
             });
 
             expect(response.status).toBe(400);
+            const data = await response.json();
+            expect(data.error).toBeDefined();
         });
 
-        it('should handle new message in existing thread', async () => {
-            const request: ContinueChatRequest = {
-                threadId: testThreadId,
-                approved: false,
-                message: 'Tell me more about the Eiffel Tower'
+        it('should handle tool calls automatically', async () => {
+            const request: ChatRequest = {
+                message: 'Search for good activities in Paris'
             };
 
-            const response = await fetch(`${BASE_URL}/api/chat/continue`, {
+            const response = await fetch(`${BASE_URL}/api/chat/start`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(request),
             });
 
             expect(response.ok).toBe(true);
-            expect(response.headers.get('content-type')).toBe('text/event-stream');
+
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+            const events: SSEEvent[] = [];
+
+            if (reader) {
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const event: SSEEvent = JSON.parse(line.substring(6));
+                                events.push(event);
+                                
+                                if (event.type === 'toolCall') {
+                                    console.log('🔧 Tool called:', event.data.name);
+                                }
+                            } catch (e) {
+                                // Ignore
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Should have completed without requiring approval
+            expect(events[events.length - 1].type).toBe('complete');
+            console.log('✅ Agent handled tools automatically');
         }, 30000);
     });
 });

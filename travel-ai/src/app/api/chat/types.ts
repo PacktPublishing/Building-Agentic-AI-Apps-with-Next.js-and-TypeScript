@@ -1,23 +1,12 @@
-export interface StartChatRequest {
+export interface ChatRequest {
     message: string;
+    threadId?: string;
     userId?: string;
 }
 
-export interface StartChatResponse {
+export interface ChatResponse {
     threadId: string;
-    requiresApproval: boolean;
-    response?: string;
-    toolCalls?: Array<{
-        id: string;
-        name: string;
-        args: Record<string, any>;
-    }>;
-}
-
-export interface ContinueChatRequest {
-    threadId: string;
-    approved: boolean;
-    message?: string;
+    response: string;
 }
 
 export interface SSEEvent {

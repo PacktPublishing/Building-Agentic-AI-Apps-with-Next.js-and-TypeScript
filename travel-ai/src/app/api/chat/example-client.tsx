@@ -1,89 +1,46 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { StartChatResponse, SSEEvent } from './types';
+import { SSEEvent } from './types';
 
 /**
  * Example React component showing how to use the Chat API
- * This is a reference implementation - adapt to your UI needs
+ * This is a simplified version without approval workflow
  */
 export default function ChatExample() {
     const [threadId, setThreadId] = useState<string | null>(null);
     const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
-    const [pendingApproval, setPendingApproval] = useState<StartChatResponse | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
 
-    const startChat = async (message: string) => {
+    const sendMessage = async (message: string) => {
         setLoading(true);
         setMessages(prev => [...prev, { role: 'user', content: message }]);
-
-        try {
-            const response = await fetch('/api/chat/start', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to start chat');
-            }
-
-            const data: StartChatResponse = await response.json();
-            setThreadId(data.threadId);
-
-            if (data.requiresApproval && data.toolCalls) {
-                // Show approval UI
-                setPendingApproval(data);
-            } else if (data.response) {
-                // Direct response
-                setMessages(prev => [...prev, { role: 'assistant', content: data.response! }]);
-            }
-        } catch (error) {
-            console.error('Error starting chat:', error);
-            setMessages(prev => [...prev, { 
-                role: 'assistant', 
-                content: 'Sorry, an error occurred.' 
-            }]);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const continueChat = async (approved: boolean, newMessage?: string) => {
-        if (!threadId) return;
-
-        setLoading(true);
-        setPendingApproval(null);
-
-        if (newMessage) {
-            setMessages(prev => [...prev, { role: 'user', content: newMessage }]);
-        }
 
         try {
             // Create abort controller for this request
             abortControllerRef.current = new AbortController();
 
-            const response = await fetch('/api/chat/continue', {
+            const response = await fetch('/api/chat/start', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    threadId,
-                    approved,
-                    message: newMessage,
+                    message,
+                    threadId: threadId || undefined,
                 }),
                 signal: abortControllerRef.current.signal,
             });
 
             if (!response.ok) {
-                throw new Error('Failed to continue chat');
+                throw new Error('Failed to send message');
             }
 
             // Read SSE stream
             const reader = response.body?.getReader();
             const decoder = new TextDecoder();
             let assistantMessage = '';
+            let newThreadId = threadId;
 
             if (reader) {
                 while (true) {
@@ -99,6 +56,13 @@ export default function ChatExample() {
                                 const event: SSEEvent = JSON.parse(line.substring(6));
 
                                 switch (event.type) {
+                                    case 'start':
+                                        if (event.data.threadId) {
+                                            newThreadId = event.data.threadId;
+                                            setThreadId(newThreadId);
+                                        }
+                                        break;
+
                                     case 'token':
                                         assistantMessage += event.data.content;
                                         // Update UI in real-time
@@ -114,21 +78,15 @@ export default function ChatExample() {
                                         break;
 
                                     case 'toolCall':
-                                        console.log('Tool call:', event.data);
+                                        console.log('🔧 Tool call:', event.data);
                                         break;
 
                                     case 'complete':
-                                        if (event.data.requiresApproval) {
-                                            setPendingApproval({
-                                                threadId,
-                                                requiresApproval: true,
-                                                toolCalls: event.data.toolCalls,
-                                            });
-                                        }
+                                        console.log('✅ Complete:', event.data);
                                         break;
 
                                     case 'error':
-                                        console.error('Stream error:', event.data);
+                                        console.error('❌ Error:', event.data);
                                         setMessages(prev => [...prev, {
                                             role: 'assistant',
                                             content: 'An error occurred: ' + event.data.error
@@ -146,7 +104,7 @@ export default function ChatExample() {
             if (error.name === 'AbortError') {
                 console.log('Request aborted');
             } else {
-                console.error('Error continuing chat:', error);
+                console.error('Error sending message:', error);
                 setMessages(prev => [...prev, {
                     role: 'assistant',
                     content: 'Sorry, an error occurred.'
@@ -164,29 +122,44 @@ export default function ChatExample() {
 
         const message = input.trim();
         setInput('');
-
-        if (threadId) {
-            continueChat(false, message);
-        } else {
-            startChat(message);
-        }
+        sendMessage(message);
     };
 
-    const handleApprove = () => {
-        continueChat(true);
-    };
-
-    const handleReject = () => {
-        setPendingApproval(null);
-        setMessages(prev => [...prev, {
-            role: 'assistant',
-            content: 'Action cancelled.'
-        }]);
+    const handleReset = () => {
+        setThreadId(null);
+        setMessages([]);
+        setInput('');
     };
 
     return (
         <div className="flex flex-col h-screen max-w-4xl mx-auto p-4">
+            <div className="flex justify-between items-center mb-4">
+                <div>
+                    {threadId && (
+                        <div className="text-sm text-gray-500">
+                            Thread: <code className="bg-gray-100 px-2 py-1 rounded">{threadId}</code>
+                        </div>
+                    )}
+                </div>
+                {messages.length > 0 && (
+                    <button
+                        onClick={handleReset}
+                        className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded"
+                    >
+                        🔄 New Chat
+                    </button>
+                )}
+            </div>
+
             <div className="flex-1 overflow-y-auto mb-4 space-y-4">
+                {messages.length === 0 && (
+                    <div className="text-center text-gray-400 mt-20">
+                        <div className="text-6xl mb-4">💬</div>
+                        <p>Start a conversation with the travel agent</p>
+                        <p className="text-sm mt-2">Try: "I want to visit Paris" or "Search for flights to NYC"</p>
+                    </div>
+                )}
+
                 {messages.map((msg, idx) => (
                     <div
                         key={idx}
@@ -203,37 +176,11 @@ export default function ChatExample() {
                     </div>
                 ))}
 
-                {pendingApproval && (
-                    <div className="p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
-                        <div className="font-semibold mb-2">⚠️ Approval Required</div>
-                        <div className="mb-3">
-                            The agent wants to perform the following actions:
-                        </div>
-                        <div className="space-y-2 mb-4">
-                            {pendingApproval.toolCalls?.map((call, idx) => (
-                                <div key={idx} className="bg-white p-3 rounded border">
-                                    <div className="font-mono text-sm font-semibold">{call.name}</div>
-                                    <pre className="text-xs mt-1 overflow-x-auto">
-                                        {JSON.stringify(call.args, null, 2)}
-                                    </pre>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={handleApprove}
-                                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-                                disabled={loading}
-                            >
-                                ✅ Approve
-                            </button>
-                            <button
-                                onClick={handleReject}
-                                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-                                disabled={loading}
-                            >
-                                ❌ Reject
-                            </button>
+                {loading && messages[messages.length - 1]?.role === 'user' && (
+                    <div className="bg-gray-100 p-4 rounded-lg mr-auto max-w-[80%]">
+                        <div className="font-semibold mb-1">🤖 Agent</div>
+                        <div className="flex items-center gap-2">
+                            <div className="animate-pulse">Thinking...</div>
                         </div>
                     </div>
                 )}

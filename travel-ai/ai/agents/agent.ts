@@ -48,7 +48,7 @@ class MyFirstAgent {
 
         // Initialize MCP client with multiple servers
         this.mcpClient = new MultiServerMCPClient({  
-            weather: {
+            amadeus: {
                 transport: "http",
                 url: config.amadeus_url,
                 headers: {
