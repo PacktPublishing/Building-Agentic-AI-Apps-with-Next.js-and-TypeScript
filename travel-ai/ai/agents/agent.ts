@@ -47,19 +47,23 @@ class MyFirstAgent {
         }
 
         // Initialize MCP client with multiple servers
-        this.mcpClient = new MultiServerMCPClient({  
-            amadeus: {
-                transport: "http",
-                url: config.amadeus_url,
-                headers: {
-                    "Authorization": `Bearer ${config.amadeus_bearer_token}`
-                }
-            },
-        });
+        // TEMPORARILY DISABLED: Amadeus tools are too large (216k tokens)
+        // this.mcpClient = new MultiServerMCPClient({  
+        //     amadeus: {
+        //         transport: "http",
+        //         url: config.amadeus_url,
+        //         headers: {
+        //             "Authorization": `Bearer ${config.amadeus_bearer_token}`
+        //         }
+        //     },
+        // });
 
         // Load tools from MCP servers
-        const mcpTools = await this.mcpClient.getTools();
-        this.tools = [...mcpTools];
+        // const mcpTools = await this.mcpClient.getTools();
+        // this.tools = [...mcpTools];
+        
+        // For now, use no tools to test the basic flow
+        this.tools = [];
 
         // Create the ReAct agent with loaded tools
         this.graph = createReactAgent({
