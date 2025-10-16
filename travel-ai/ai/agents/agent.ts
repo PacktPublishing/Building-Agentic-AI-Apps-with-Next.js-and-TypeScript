@@ -1,4 +1,4 @@
-import { ChatOpenAI } from "@langchain/openai";
+import { ChatAnthropic } from "@langchain/anthropic";
 import { MemorySaver } from "@langchain/langgraph";
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { MultiServerMCPClient } from "@langchain/mcp-adapters"; 
@@ -6,7 +6,7 @@ import type { DynamicStructuredTool } from "@langchain/core/tools";
 import { config } from "../../config";
 
 class MyFirstAgent {
-    private model: ChatOpenAI;
+    private model: ChatAnthropic;
     private tools: DynamicStructuredTool[];
     private memory: MemorySaver;
     private graph: any;
@@ -17,9 +17,9 @@ class MyFirstAgent {
     private static instance: MyFirstAgent;
 
     private constructor() {
-        this.model = new ChatOpenAI({
-            apiKey: config.openai_api_key,
-            model: config.model_name || "gpt-4.1-mini",
+        this.model = new ChatAnthropic({
+            apiKey: config.anthropic_api_key,
+            model: config.model_name || "claude-3-7-sonnet-20250219",
             streaming: true,
             temperature: 0.5,
         });
@@ -117,7 +117,7 @@ Thought:`;
         
         console.log('Initial invoke result messages:', result.messages.map((m: any) => ({
             type: m.type || m._getType?.(),
-            content: m.content?.substring(0, 100),
+            content: typeof m.content === 'string' ? m.content.substring(0, 100) : JSON.stringify(m.content).substring(0, 100),
             hasToolCalls: !!m.tool_calls
         })));
         
@@ -129,7 +129,7 @@ Thought:`;
             result = await this.graph.invoke(null, config);
             console.log('After continuation:', result.messages.map((m: any) => ({
                 type: m.type || m._getType?.(),
-                content: m.content?.substring(0, 100),
+                content: typeof m.content === 'string' ? m.content.substring(0, 100) : JSON.stringify(m.content).substring(0, 100),
                 hasToolCalls: !!m.tool_calls
             })));
         }
@@ -138,14 +138,22 @@ Thought:`;
         for (let i = result.messages.length - 1; i >= 0; i--) {
             const msg = result.messages[i];
             if ((msg.type === 'ai' || msg._getType?.() === 'ai') && msg.content) {
-                console.log('Found AI message with content:', msg.content.substring(0, 100));
-                return msg.content;
+                // Handle content that might be an array (Claude format)
+                const content = typeof msg.content === 'string' 
+                    ? msg.content 
+                    : Array.isArray(msg.content) 
+                        ? msg.content.map((c: any) => c.text || JSON.stringify(c)).join('')
+                        : JSON.stringify(msg.content);
+                
+                console.log('Found AI message with content:', content.substring(0, 100));
+                return content;
             }
         }
         
         // Fallback
         console.log('No AI message found, returning last message');
-        return result.messages[result.messages.length - 1].content || '';
+        const lastContent = result.messages[result.messages.length - 1].content;
+        return typeof lastContent === 'string' ? lastContent : JSON.stringify(lastContent) || '';
     }
 
     async getState(threadId: string = "default") {

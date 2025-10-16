@@ -4,8 +4,10 @@ dotenv.config();
 class Config {
     openai_api_key: string = "";
     have_openai_api_key: boolean = false;
+    anthropic_api_key: string = "";
+    have_anthropic_api_key: boolean = false;
     have_model: boolean = false;
-    model_name: string = "gpt-oss-120b";
+    model_name: string = "claude-3-7-sonnet-20250219";
     amadeus_bearer_token: string = "";
     have_amadeus_bearer_token: boolean = false;
     amadeus_url: string = "";
@@ -27,9 +29,11 @@ class Config {
 
     init() {
         this.have_openai_api_key = this.apiKeyExists("OPENAI_API_KEY");
+        this.have_anthropic_api_key = this.apiKeyExists("ANTHROPIC_API_KEY");
         this.have_model = this.apiKeyExists("MODEL_NAME");
         this.openai_api_key = this.populate("OPENAI_API_KEY");
-        this.model_name = this.populate("MODEL_NAME") || "gpt-4.1-mini";
+        this.anthropic_api_key = this.populate("ANTHROPIC_API_KEY");
+        this.model_name = this.populate("MODEL_NAME") || "claude-3-7-sonnet-20250219";
         this.have_amadeus_bearer_token = this.apiKeyExists("AMADEUS_BEARER_TOKEN");
         this.amadeus_bearer_token = this.populate("AMADEUS_BEARER_TOKEN");
         this.have_amadeus_url = this.apiKeyExists("AMADEUS_URL");
