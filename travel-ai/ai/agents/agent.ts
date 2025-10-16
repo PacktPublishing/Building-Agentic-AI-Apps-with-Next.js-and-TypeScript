@@ -139,11 +139,17 @@ Thought:`;
             const msg = result.messages[i];
             if ((msg.type === 'ai' || msg._getType?.() === 'ai') && msg.content) {
                 // Handle content that might be an array (Claude format)
-                const content = typeof msg.content === 'string' 
+                let content = typeof msg.content === 'string' 
                     ? msg.content 
                     : Array.isArray(msg.content) 
                         ? msg.content.map((c: any) => c.text || JSON.stringify(c)).join('')
                         : JSON.stringify(msg.content);
+                
+                // Extract only the Final Answer part if present (clean ReAct format)
+                const finalAnswerMatch = content.match(/Final Answer:\s*([\s\S]*)/);
+                if (finalAnswerMatch) {
+                    content = finalAnswerMatch[1].trim();
+                }
                 
                 console.log('Found AI message with content:', content.substring(0, 100));
                 return content;
