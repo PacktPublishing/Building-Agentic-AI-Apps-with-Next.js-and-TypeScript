@@ -64,31 +64,15 @@ class MyFirstAgent {
         this.tools = [ ...mcpTools ];
 
         // Create the ReAct agent with loaded tools and custom prompt
-        const systemPrompt = `You are a helpful travel assistant. Answer questions as best you can. You have access to the following tools:
+        const systemPrompt = `You are a helpful travel planning assistant. You have access to various tools to help users plan their trips.
 
-{tools}
-
-Use the following format:
-
-Question: the input question you must answer
-Thought: you should always think about what to do
-Action: the action to take, should be one of [{tool_names}]
-Action Input: the input to the action
-Observation: the result of the action
-... (this Thought/Action/Action Input/Observation can repeat N times)
-Thought: I now know the final answer
-Final Answer: the final answer to the original input question
-
-Begin!
-
-Question: {input}
-Thought:`;
+Use the tools available to search for flights, hotels, activities, and other travel information.
+Always provide detailed and helpful responses based on the tool results.`;
 
         this.graph = createReactAgent({
             llm: this.model,
             tools: this.tools,
             checkpointSaver: this.memory,
-           // interruptBefore: config.is_interrupt ? ["tools"] : [],
             messageModifier: systemPrompt
         });
 
