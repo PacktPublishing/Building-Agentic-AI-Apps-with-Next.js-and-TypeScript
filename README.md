@@ -127,6 +127,13 @@ pnpm dev
 5. **Open your browser:**
 Navigate to [http://localhost:3000](http://localhost:3000)
 
+### Windows-specific Notes
+
+- **Terminal:** Use PowerShell or Windows Terminal. If Corepack is disabled, enable it once with `corepack enable pnpm` (run the shell as administrator if permission errors occur).
+- **Database commands:** `pnpm db:push` and related scripts run `cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit ...`, so they behave the same on Windows, macOS, and Linux.
+- **Execution policy:** If PowerShell blocks pnpm scripts, run `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` once and restart the terminal.
+- **TLS warning:** The database scripts temporarily disable TLS verification for local development. Re-enable certificate validation (`NODE_TLS_REJECT_UNAUTHORIZED` unset) before pushing to production environments.
+
 ## Available Scripts
 
 ### Development

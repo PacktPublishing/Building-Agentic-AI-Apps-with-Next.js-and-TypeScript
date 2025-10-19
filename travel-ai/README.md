@@ -64,6 +64,14 @@ src/                    # Source files
 4. **Open your browser:**
    Navigate to [http://localhost:3000](http://localhost:3000)
 
+### Windows Setup Notes
+
+- **Use PowerShell or Windows Terminal.** Corepack comes bundled with Node.js 18+, so enable it once with `corepack enable pnpm` (run as administrator if you hit permission errors).
+- **Install dependencies:** `pnpm install`
+- **Apply database schema:** `pnpm db:push` (internally uses `cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit push`, so it works the same on Windows, macOS, and Linux). Re-run this after editing Drizzle migrations.
+- **Start developing:** `pnpm dev` and open `http://localhost:3000`
+- **Troubleshooting:** If PowerShell refuses scripts, right-click the terminal and choose “Run as administrator”, then execute `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` once.
+
 ### 🚨 Common Setup Issues & Solutions
 
 #### Issue: "Module not found" errors
