@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
                         sendEvent(event);
                         
                         // Accumulate text for final response
-                        if (event.type === 'thinking' || event.type === 'text') {
+                        if (event.type === 'thinking') {
                             fullResponse += event.data.content + '\n';
                         }
                     }

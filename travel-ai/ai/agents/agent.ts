@@ -285,108 +285,123 @@ Thought:`;
         const stream = await this.graph.stream(
             { messages: [{ role: "user", content: message }] },
             config,
-            { streamMode: "values" }
+            { streamMode: "updates" }  // Changed from "values" to "updates"
         );
 
         let processedMessageIds = new Set<string>();
-        let lastMessageCount = 0;
 
         for await (const chunk of stream) {
-            const messages = chunk.agent?.messages || chunk.messages;
+            console.log('[streamStructured] Chunk received, keys:', Object.keys(chunk));
             
-            if (!messages || !Array.isArray(messages)) continue;
+            // Process each node update in the chunk
+            for (const [nodeName, nodeData] of Object.entries(chunk)) {
+                console.log('[streamStructured] Processing node:', nodeName);
+                
+                // Extract messages from the node data
+                const messages = (nodeData as any)?.messages || (Array.isArray(nodeData) ? nodeData : null);
+                
+                if (!messages || !Array.isArray(messages)) {
+                    console.log('[streamStructured] No messages in node:', nodeName);
+                    continue;
+                }
 
-            // Only process NEW messages (not already seen)
-            const newMessages = messages.slice(lastMessageCount);
-            lastMessageCount = messages.length;
+                console.log('[streamStructured] Messages in node:', messages.length);
 
-            for (const msg of newMessages) {
-                const msgId = msg.id || `${msg.type}-${JSON.stringify(msg.content).substring(0, 50)}`;
-                if (processedMessageIds.has(msgId)) continue;
-                processedMessageIds.add(msgId);
+                for (const msg of messages) {
+                    const msgId = msg.id || `${msg.type}-${JSON.stringify(msg.content).substring(0, 50)}`;
+                    if (processedMessageIds.has(msgId)) {
+                        console.log('[streamStructured] Skipping already processed message');
+                        continue;
+                    }
+                    processedMessageIds.add(msgId);
 
-                // Handle AI messages
-                if (msg.type === 'ai' || msg._getType?.() === 'ai') {
-                    // Extract content (can be string or array)
-                    let textContent = '';
-                    let toolCalls: any[] = [];
+                    console.log('[streamStructured] Processing message type:', msg.type || msg._getType?.());
 
-                    if (Array.isArray(msg.content)) {
-                        for (const block of msg.content) {
-                            if (block.type === 'text') {
-                                textContent += block.text;
-                            } else if (block.type === 'tool_use') {
-                                toolCalls.push({
-                                    id: block.id,
-                                    name: block.name,
-                                    args: typeof block.input === 'string' ? JSON.parse(block.input) : block.input
-                                });
+                    // Handle AI messages
+                    if (msg.type === 'ai' || msg._getType?.() === 'ai') {
+                        console.log('[streamStructured] AI message detected');
+                        // Extract content (can be string or array)
+                        let textContent = '';
+                        let toolCalls: any[] = [];
+
+                        if (Array.isArray(msg.content)) {
+                            for (const block of msg.content) {
+                                if (block.type === 'text') {
+                                    textContent += block.text;
+                                } else if (block.type === 'tool_use') {
+                                    toolCalls.push({
+                                        id: block.id,
+                                        name: block.name,
+                                        args: typeof block.input === 'string' ? JSON.parse(block.input) : block.input
+                                    });
+                                }
+                            }
+                        } else if (typeof msg.content === 'string') {
+                            textContent = msg.content;
+                        }
+
+                        // Also check tool_calls property
+                        if (msg.tool_calls && msg.tool_calls.length > 0) {
+                            toolCalls = msg.tool_calls;
+                        }
+
+                        // Emit thinking event (text before tool calls or final answer)
+                        if (textContent) {
+                            // Remove "Thought:" and "Final Answer:" prefixes
+                            let cleanText = textContent
+                                .replace(/^Thought:\s*/i, '')
+                                .replace(/^Final Answer:\s*/i, '');
+
+                            if (cleanText.trim()) {
+                                yield {
+                                    type: 'thinking' as const,
+                                    data: { content: cleanText.trim() }
+                                };
                             }
                         }
-                    } else if (typeof msg.content === 'string') {
-                        textContent = msg.content;
-                    }
 
-                    // Also check tool_calls property
-                    if (msg.tool_calls && msg.tool_calls.length > 0) {
-                        toolCalls = msg.tool_calls;
-                    }
-
-                    // Emit thinking event (text before tool calls or final answer)
-                    if (textContent) {
-                        // Remove "Thought:" and "Final Answer:" prefixes
-                        let cleanText = textContent
-                            .replace(/^Thought:\s*/i, '')
-                            .replace(/^Final Answer:\s*/i, '');
-
-                        if (cleanText.trim()) {
+                        // Emit tool call events
+                        for (const toolCall of toolCalls) {
                             yield {
-                                type: 'thinking' as const,
-                                data: { content: cleanText.trim() }
+                                type: 'tool_call_start' as const,
+                                data: {
+                                    toolName: toolCall.name,
+                                    args: toolCall.args,
+                                    toolCallId: toolCall.id
+                                }
                             };
                         }
                     }
 
-                    // Emit tool call events
-                    for (const toolCall of toolCalls) {
-                        yield {
-                            type: 'tool_call_start' as const,
-                            data: {
-                                toolName: toolCall.name,
-                                args: toolCall.args,
-                                toolCallId: toolCall.id
-                            }
-                        };
-                    }
-                }
-
-                // Handle Tool messages (results)
-                if (msg.type === 'tool' || msg._getType?.() === 'tool') {
-                    const result = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content;
-                    
-                    // Check if it's activities data (for UI component)
-                    if (msg.name === 'search_tours_activities' && result.success && result.data) {
-                        yield {
-                            type: 'ui_component' as const,
-                            data: {
-                                component: 'ActivityList',
-                                props: {
-                                    activities: result.data,
-                                    totalAvailable: result.meta?.totalAvailable || result.data.length
+                    // Handle Tool messages (results)
+                    if (msg.type === 'tool' || msg._getType?.() === 'tool') {
+                        console.log('[streamStructured] Tool message detected, name:', msg.name);
+                        const result = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content;
+                        
+                        // Check if it's activities data (for UI component)
+                        if (msg.name === 'search_tours_activities' && result.success && result.data) {
+                            yield {
+                                type: 'ui_component' as const,
+                                data: {
+                                    component: 'ActivityList',
+                                    props: {
+                                        activities: result.data,
+                                        totalAvailable: result.meta?.totalAvailable || result.data.length
+                                    }
                                 }
-                            }
-                        };
-                    } else {
-                        // Generic tool result
-                        yield {
-                            type: 'tool_result' as const,
-                            data: {
-                                toolName: msg.name,
-                                toolCallId: msg.tool_call_id,
-                                result: result,
-                                summary: this.summarizeToolResult(msg.name, result)
-                            }
-                        };
+                            };
+                        } else {
+                            // Generic tool result
+                            yield {
+                                type: 'tool_result' as const,
+                                data: {
+                                    toolName: msg.name,
+                                    toolCallId: msg.tool_call_id,
+                                    result: result,
+                                    summary: this.summarizeToolResult(msg.name, result)
+                                }
+                            };
+                        }
                     }
                 }
             }
