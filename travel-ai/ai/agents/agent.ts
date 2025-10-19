@@ -390,6 +390,20 @@ Thought:`;
                     if (msg.type === 'tool' || msg._getType?.() === 'tool') {
                         console.log('[streamStructured] Tool message detected, name:', msg.name);
                         
+                        // Check if content is an error string
+                        if (typeof msg.content === 'string' && msg.content.startsWith('Error:')) {
+                            console.error('[streamStructured] Tool returned error:', msg.content);
+                            
+                            yield {
+                                type: 'error' as const,
+                                data: {
+                                    error: `Tool ${msg.name} failed`,
+                                    details: msg.content.substring(0, 200)
+                                }
+                            };
+                            continue; // Skip further processing
+                        }
+                        
                         // Try to parse JSON, fallback to raw content if it fails
                         let result;
                         try {
