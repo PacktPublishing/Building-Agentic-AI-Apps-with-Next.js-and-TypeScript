@@ -423,26 +423,98 @@ Thought:`;
                             };
                         }
                         // Check if it's flights data (for UI component)
-                        else if (msg.name === 'search_flights' && result.flights && result.flights.length > 0) {
+                        else if (msg.name === 'search_flights' && result.success && result.data && result.data.length > 0) {
+                            // Transform Amadeus flight data to our format
+                            const flights = result.data.slice(0, 3).map((offer: any) => ({
+                                id: offer.id,
+                                price: {
+                                    amount: parseFloat(offer.price?.total || offer.price?.grandTotal || '0'),
+                                    currency: offer.price?.currency || 'EUR'
+                                },
+                                outbound: {
+                                    departure: {
+                                        airport: {
+                                            code: offer.itineraries[0]?.segments[0]?.departure?.iataCode || '',
+                                            name: offer.itineraries[0]?.segments[0]?.departure?.iataCode || ''
+                                        },
+                                        time: offer.itineraries[0]?.segments[0]?.departure?.at || ''
+                                    },
+                                    arrival: {
+                                        airport: {
+                                            code: offer.itineraries[0]?.segments[offer.itineraries[0].segments.length - 1]?.arrival?.iataCode || '',
+                                            name: offer.itineraries[0]?.segments[offer.itineraries[0].segments.length - 1]?.arrival?.iataCode || ''
+                                        },
+                                        time: offer.itineraries[0]?.segments[offer.itineraries[0].segments.length - 1]?.arrival?.at || ''
+                                    },
+                                    airline: {
+                                        code: offer.itineraries[0]?.segments[0]?.carrierCode || '',
+                                        name: offer.validatingAirlineCodes?.[0] || offer.itineraries[0]?.segments[0]?.carrierCode || ''
+                                    },
+                                    duration: offer.itineraries[0]?.duration?.replace('PT', '').replace('H', 'h ').replace('M', 'm') || '',
+                                    stops: (offer.itineraries[0]?.segments?.length || 1) - 1
+                                },
+                                inbound: {
+                                    departure: {
+                                        airport: {
+                                            code: offer.itineraries[1]?.segments[0]?.departure?.iataCode || '',
+                                            name: offer.itineraries[1]?.segments[0]?.departure?.iataCode || ''
+                                        },
+                                        time: offer.itineraries[1]?.segments[0]?.departure?.at || ''
+                                    },
+                                    arrival: {
+                                        airport: {
+                                            code: offer.itineraries[1]?.segments[offer.itineraries[1].segments.length - 1]?.arrival?.iataCode || '',
+                                            name: offer.itineraries[1]?.segments[offer.itineraries[1].segments.length - 1]?.arrival?.iataCode || ''
+                                        },
+                                        time: offer.itineraries[1]?.segments[offer.itineraries[1].segments.length - 1]?.arrival?.at || ''
+                                    },
+                                    airline: {
+                                        code: offer.itineraries[1]?.segments[0]?.carrierCode || '',
+                                        name: offer.validatingAirlineCodes?.[0] || offer.itineraries[1]?.segments[0]?.carrierCode || ''
+                                    },
+                                    duration: offer.itineraries[1]?.duration?.replace('PT', '').replace('H', 'h ').replace('M', 'm') || '',
+                                    stops: (offer.itineraries[1]?.segments?.length || 1) - 1
+                                }
+                            }));
+
                             yield {
                                 type: 'ui_component' as const,
                                 data: {
                                     component: 'FlightList',
-                                    props: {
-                                        flights: result.flights
-                                    }
+                                    props: { flights }
                                 }
                             };
                         }
                         // Check if it's hotels data (for UI component)
-                        else if (msg.name === 'search_hotels' && result.hotels && result.hotels.length > 0) {
+                        else if (msg.name === 'search_hotels' && result.success && result.data && result.data.length > 0) {
+                            // Transform Amadeus hotel data to our format
+                            const hotels = result.data.slice(0, 4).map((hotelOffer: any) => ({
+                                id: hotelOffer.hotel?.hotelId || hotelOffer.id,
+                                name: hotelOffer.hotel?.name || 'Hotel',
+                                rating: 4, // Default rating as Amadeus doesn't provide it
+                                address: {
+                                    street: hotelOffer.hotel?.address?.lines?.[0] || '',
+                                    city: hotelOffer.hotel?.cityCode || '',
+                                    postalCode: hotelOffer.hotel?.address?.postalCode || ''
+                                },
+                                location: {
+                                    latitude: hotelOffer.hotel?.latitude || 0,
+                                    longitude: hotelOffer.hotel?.longitude || 0
+                                },
+                                description: hotelOffer.offers?.[0]?.room?.description?.text || 'Comfortable hotel room',
+                                amenities: ['WiFi', 'Air Conditioning', 'Room Service'], // Default amenities
+                                price: {
+                                    amount: parseFloat(hotelOffer.offers?.[0]?.price?.total || '0'),
+                                    currency: hotelOffer.offers?.[0]?.price?.currency || 'EUR'
+                                },
+                                images: ['https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800'] // Placeholder
+                            }));
+
                             yield {
                                 type: 'ui_component' as const,
                                 data: {
                                     component: 'HotelList',
-                                    props: {
-                                        hotels: result.hotels
-                                    }
+                                    props: { hotels }
                                 }
                             };
                         }
