@@ -13,7 +13,7 @@ interface MessageRendererProps {
 
 export function MessageRenderer({ events }: MessageRendererProps) {
     return (
-        <div className="space-y-2">
+        <div className="space-y-2 font-[family-name:var(--font-inter)]">
             {events.map((event, index) => {
                 switch (event.type) {
                     case 'thinking':
