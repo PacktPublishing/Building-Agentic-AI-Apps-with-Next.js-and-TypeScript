@@ -134,6 +134,26 @@ export function FlightCard({ flight }: FlightCardProps) {
                     <span>{flight.inbound.airline.name} ({flight.inbound.airline.code})</span>
                 </div>
             </div>
+
+            {/* Booking Button */}
+            <div className="px-6 pb-6">
+                <a
+                    href={`https://www.google.com/travel/flights?q=flights+from+${flight.outbound.departure.airport.code}+to+${flight.outbound.arrival.airport.code}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl text-center group"
+                >
+                    <span className="flex items-center justify-center gap-2">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                        Book this flight
+                        <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                    </span>
+                </a>
+            </div>
         </div>
     );
 }

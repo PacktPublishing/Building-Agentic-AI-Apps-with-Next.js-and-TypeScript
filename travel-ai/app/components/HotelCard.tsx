@@ -84,41 +84,61 @@ export function HotelCard({ hotel }: HotelCardProps) {
                     </div>
                 )}
 
-                {/* Price and Contact */}
-                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                    <div>
-                        <div className="text-xs text-gray-500 mb-1">Price per night</div>
-                        <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                            {hotel.price.currency} {hotel.price.amount.toFixed(0)}
+                {/* Price */}
+                <div className="pt-4 border-t border-gray-100">
+                    <div className="flex items-baseline justify-between mb-4">
+                        <div>
+                            <div className="text-xs text-gray-500 mb-1">Price per night</div>
+                            <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                                {hotel.price.currency} {hotel.price.amount.toFixed(0)}
+                            </div>
                         </div>
+                        
+                        {hotel.contact && (
+                            <div className="flex gap-2">
+                                {hotel.contact.phone && (
+                                    <a
+                                        href={`tel:${hotel.contact.phone}`}
+                                        className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                                        title="Call hotel"
+                                    >
+                                        <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                        </svg>
+                                    </a>
+                                )}
+                                {hotel.contact.email && (
+                                    <a
+                                        href={`mailto:${hotel.contact.email}`}
+                                        className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                                        title="Email hotel"
+                                    >
+                                        <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                        </svg>
+                                    </a>
+                                )}
+                            </div>
+                        )}
                     </div>
-                    
-                    {hotel.contact && (
-                        <div className="flex gap-2">
-                            {hotel.contact.phone && (
-                                <a
-                                    href={`tel:${hotel.contact.phone}`}
-                                    className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                                    title="Call hotel"
-                                >
-                                    <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                                    </svg>
-                                </a>
-                            )}
-                            {hotel.contact.email && (
-                                <a
-                                    href={`mailto:${hotel.contact.email}`}
-                                    className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                                    title="Email hotel"
-                                >
-                                    <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                    </svg>
-                                </a>
-                            )}
-                        </div>
-                    )}
+
+                    {/* Booking Button */}
+                    <a
+                        href={`https://www.google.com/travel/hotels?q=${encodeURIComponent(hotel.name + ' ' + hotel.address.city)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block w-full py-3 px-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl text-center group"
+                    >
+                        <span className="flex items-center justify-center gap-2">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                            Book this hotel
+                            <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                        </span>
+                    </a>
                 </div>
             </div>
         </div>
