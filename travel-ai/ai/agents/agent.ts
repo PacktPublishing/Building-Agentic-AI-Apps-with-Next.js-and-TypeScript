@@ -500,9 +500,12 @@ Thought:`;
                             };
                         }
                         // Check if it's hotels data (for UI component)
-                        else if (msg.name === 'search_hotels' && result.success && result.data && result.data.length > 0) {
+                        else if (msg.name === 'search_hotels' && result.success && result.data && Array.isArray(result.data) && result.data.length > 0) {
+                            console.log('[streamStructured] Processing hotels, count:', result.data.length);
                             // Transform Amadeus hotel data to our format
-                            const hotels = result.data.slice(0, 4).map((hotelOffer: any) => ({
+                            const hotels = result.data.slice(0, 4).map((hotelOffer: any) => {
+                                console.log('[streamStructured] Hotel offer:', hotelOffer.hotel?.name);
+                                return {
                                 id: hotelOffer.hotel?.hotelId || hotelOffer.id,
                                 name: hotelOffer.hotel?.name || 'Hotel',
                                 rating: 4, // Default rating as Amadeus doesn't provide it
@@ -522,7 +525,8 @@ Thought:`;
                                     currency: hotelOffer.offers?.[0]?.price?.currency || 'EUR'
                                 },
                                 images: ['https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800'] // Placeholder
-                            }));
+                            };
+                            });
 
                             yield {
                                 type: 'ui_component' as const,
