@@ -384,6 +384,16 @@ Thought:`;
                         } catch (e) {
                             console.error('[streamStructured] Failed to parse tool result as JSON:', e);
                             result = { success: false, error: msg.content };
+                            
+                            // Emit error event for failed tool
+                            yield {
+                                type: 'error' as const,
+                                data: {
+                                    error: `Tool ${msg.name} failed`,
+                                    details: typeof msg.content === 'string' ? msg.content.substring(0, 200) : 'Unknown error'
+                                }
+                            };
+                            continue; // Skip further processing
                         }
                         
                         // Check if it's activities data (for UI component)

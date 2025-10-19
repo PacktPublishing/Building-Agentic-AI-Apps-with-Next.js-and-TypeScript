@@ -32,6 +32,10 @@ export function MessageRenderer({ events }: MessageRendererProps) {
                         );
 
                     case 'tool_result':
+                        // Don't show tool results with errors (they're handled by error event)
+                        if (event.data.result?.success === false) {
+                            return null;
+                        }
                         return (
                             <ToolCallBadge
                                 key={`tool-result-${index}`}
