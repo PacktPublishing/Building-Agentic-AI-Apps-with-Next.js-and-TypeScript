@@ -58,19 +58,19 @@ export default function ChatPage() {
                             </p>
                             <div className="mt-6 flex flex-wrap gap-2 justify-center">
                                 <button
-                                    onClick={() => setInput('Find activities in Paris')}
+                                    onClick={() => sendMessage('Find activities in Paris')}
                                     className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
                                 >
                                     Find activities in Paris
                                 </button>
                                 <button
-                                    onClick={() => setInput('Search hotels in Tokyo')}
+                                    onClick={() => sendMessage('Search hotels in Tokyo')}
                                     className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
                                 >
                                     Search hotels in Tokyo
                                 </button>
                                 <button
-                                    onClick={() => setInput('Find flights to New York')}
+                                    onClick={() => sendMessage('Find flights to New York')}
                                     className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
                                 >
                                     Find flights to New York
