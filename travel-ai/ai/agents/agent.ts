@@ -376,7 +376,15 @@ Thought:`;
                     // Handle Tool messages (results)
                     if (msg.type === 'tool' || msg._getType?.() === 'tool') {
                         console.log('[streamStructured] Tool message detected, name:', msg.name);
-                        const result = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content;
+                        
+                        // Try to parse JSON, fallback to raw content if it fails
+                        let result;
+                        try {
+                            result = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content;
+                        } catch (e) {
+                            console.error('[streamStructured] Failed to parse tool result as JSON:', e);
+                            result = { success: false, error: msg.content };
+                        }
                         
                         // Check if it's activities data (for UI component)
                         if (msg.name === 'search_tours_activities' && result.success && result.data) {
