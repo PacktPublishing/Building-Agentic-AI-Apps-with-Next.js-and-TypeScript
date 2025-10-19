@@ -347,15 +347,28 @@ Thought:`;
 
                         // Emit thinking event (text before tool calls or final answer)
                         if (textContent) {
-                            // Remove "Thought:" and "Final Answer:" prefixes
-                            let cleanText = textContent
-                                .replace(/^Thought:\s*/i, '')
-                                .replace(/^Final Answer:\s*/i, '');
+                            // Parse ReAct format to extract only the Thought part
+                            const thoughtMatch = textContent.match(/Thought:\s*([\s\S]+?)(?=\nAction:|$)/);
+                            const finalAnswerMatch = textContent.match(/Final Answer:\s*([\s\S]+?)$/);
+                            
+                            let cleanText = '';
+                            if (thoughtMatch) {
+                                cleanText = thoughtMatch[1].trim();
+                            } else if (finalAnswerMatch) {
+                                cleanText = finalAnswerMatch[1].trim();
+                            } else {
+                                // Fallback: remove prefixes
+                                cleanText = textContent
+                                    .replace(/^Thought:\s*/i, '')
+                                    .replace(/^Final Answer:\s*/i, '')
+                                    .replace(/Action:[\s\S]*$/, '')
+                                    .trim();
+                            }
 
-                            if (cleanText.trim()) {
+                            if (cleanText) {
                                 yield {
                                     type: 'thinking' as const,
-                                    data: { content: cleanText.trim() }
+                                    data: { content: cleanText }
                                 };
                             }
                         }
