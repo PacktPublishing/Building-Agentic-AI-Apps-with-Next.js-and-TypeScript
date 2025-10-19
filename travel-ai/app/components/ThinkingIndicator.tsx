@@ -25,14 +25,6 @@ export function ThinkingIndicator({ content }: ThinkingIndicatorProps) {
                 
                 {content ? (
                     <div className="flex-1 text-sm text-gray-800">
-                        <div className="font-medium text-blue-900 mb-2 flex items-center gap-2">
-                            <span>AI is thinking</span>
-                            <div className="flex gap-1">
-                                <div className="w-1 h-1 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                <div className="w-1 h-1 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                <div className="w-1 h-1 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                            </div>
-                        </div>
                         <MarkdownContent content={content} />
                     </div>
                 ) : (
