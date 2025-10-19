@@ -4,6 +4,8 @@ import { SSEEvent } from '../api/chat/types';
 import { ThinkingIndicator } from './ThinkingIndicator';
 import { ToolCallBadge } from './ToolCallBadge';
 import { ActivityList } from './ActivityList';
+import { FlightList } from './FlightList';
+import { HotelList } from './HotelList';
 
 interface MessageRendererProps {
     events: SSEEvent[];
@@ -51,6 +53,22 @@ export function MessageRenderer({ events }: MessageRendererProps) {
                                     key={`activity-list-${index}`}
                                     activities={event.data.props.activities}
                                     totalAvailable={event.data.props.totalAvailable}
+                                />
+                            );
+                        }
+                        if (event.data.component === 'FlightList') {
+                            return (
+                                <FlightList
+                                    key={`flight-list-${index}`}
+                                    flights={event.data.props.flights}
+                                />
+                            );
+                        }
+                        if (event.data.component === 'HotelList') {
+                            return (
+                                <HotelList
+                                    key={`hotel-list-${index}`}
+                                    hotels={event.data.props.hotels}
                                 />
                             );
                         }

@@ -421,7 +421,32 @@ Thought:`;
                                     }
                                 }
                             };
-                        } else {
+                        }
+                        // Check if it's flights data (for UI component)
+                        else if (msg.name === 'search_flights' && result.flights && result.flights.length > 0) {
+                            yield {
+                                type: 'ui_component' as const,
+                                data: {
+                                    component: 'FlightList',
+                                    props: {
+                                        flights: result.flights
+                                    }
+                                }
+                            };
+                        }
+                        // Check if it's hotels data (for UI component)
+                        else if (msg.name === 'search_hotels' && result.hotels && result.hotels.length > 0) {
+                            yield {
+                                type: 'ui_component' as const,
+                                data: {
+                                    component: 'HotelList',
+                                    props: {
+                                        hotels: result.hotels
+                                    }
+                                }
+                            };
+                        }
+                        else {
                             // Generic tool result
                             yield {
                                 type: 'tool_result' as const,
