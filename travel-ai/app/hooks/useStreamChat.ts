@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { SSEEvent } from '../api/chat/types';
 
 export interface StreamMessage {
@@ -15,8 +15,11 @@ export function useStreamChat() {
     const [messages, setMessages] = useState<StreamMessage[]>([]);
     const [isStreaming, setIsStreaming] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    
+    // Generate a unique thread ID for this chat session
+    const threadId = useMemo(() => `thread-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, []);
 
-    const sendMessage = useCallback(async (message: string, threadId?: string) => {
+    const sendMessage = useCallback(async (message: string) => {
         setIsStreaming(true);
         setError(null);
 
@@ -106,7 +109,7 @@ export function useStreamChat() {
         } finally {
             setIsStreaming(false);
         }
-    }, []);
+    }, [threadId]);
 
     const clearMessages = useCallback(() => {
         setMessages([]);
