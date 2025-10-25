@@ -147,14 +147,14 @@ data: {"type":"complete","data":{"threadId":"thread-123","response":"That sounds
 Both routes support conversation continuation via `threadId`:
 
 ```bash
-# Première requête
+# First request
 curl -X POST http://localhost:3000/api/chat/invoke \
   -H "Content-Type: application/json" \
   -d '{"message": "Hello!"}'
 
 # Response: {"threadId": "thread-123", "response": "..."}
-
-# Requête suivante avec le même threadId
+ 
+# Next request with the same threadId
 curl -X POST http://localhost:3000/api/chat/invoke \
   -H "Content-Type: application/json" \
   -d '{
