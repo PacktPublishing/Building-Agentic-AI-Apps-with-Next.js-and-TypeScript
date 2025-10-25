@@ -59,9 +59,7 @@ class MyFirstAgent {
 
 
         const mcpTools = await this.mcpClient.getTools();
-        this.tools = [...mcpTools];
-        
-        this.tools = [ ...mcpTools ];
+        this.tools = [...mcpTools]; 
 
         // Create the ReAct agent with loaded tools and custom prompt
         const systemPrompt = `You are a helpful travel planning assistant. You have access to various tools to help users plan their trips.
