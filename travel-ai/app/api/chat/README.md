@@ -1,43 +1,43 @@
 # Chat API
 
-Deux approches pour interagir avec l'agent de voyage : **invocation classique** et **streaming SSE**.
+Two approaches to interact with the travel agent: **classic invocation** and **SSE streaming**.
 
 ---
 
 ## 🔹 Route 1: POST `/api/chat/invoke`
 
-**Invocation classique** - Attend la réponse complète avant de retourner.
+**Classic invocation** — waits for the full response before returning.
 
-### Quand l'utiliser ?
-- Vous n'avez pas besoin de streaming en temps réel
-- Vous voulez une réponse complète d'un coup
-- Intégration simple dans des systèmes existants
+### When to use it?
+- You don’t need real-time streaming
+- You want a complete response at once
+- Simple integration into existing systems
 
 ### Request Body
 ```typescript
 {
-  message: string;      // Le message de l'utilisateur
-  threadId?: string;    // ID du thread (optionnel)
-  userId?: string;      // ID de l'utilisateur (optionnel)
+  message: string;      // User's message
+  threadId?: string;    // Thread ID (optional)
+  userId?: string;      // User ID (optional)
 }
 ```
 
 ### Response
 ```typescript
 {
-  threadId: string;     // ID du thread de conversation
-  response: string;     // Réponse complète de l'agent
+  threadId: string;     // Conversation thread ID
+  response: string;     // Agent's full response
 }
 ```
 
-### Exemple
+### Example
 ```bash
 curl -X POST http://localhost:3000/api/chat/invoke \
   -H "Content-Type: application/json" \
   -d '{"message": "Hello! I want to visit Paris"}'
 ```
 
-**Réponse:**
+**Response:**
 ```json
 {
   "threadId": "thread-1234567890-abc123",
@@ -49,27 +49,27 @@ curl -X POST http://localhost:3000/api/chat/invoke \
 
 ## 🔹 Route 2: POST `/api/chat/stream`
 
-**Server-Sent Events (SSE)** - Streaming en temps réel de la réponse.
+**Server-Sent Events (SSE)** — real-time streaming of the response.
 
-### Quand l'utiliser ?
-- Vous voulez une meilleure UX avec affichage progressif
-- Application web interactive (chat UI)
-- Feedback immédiat à l'utilisateur
+### When to use it?
+- You want better UX with progressive display
+- Interactive web application (chat UI)
+- Immediate feedback to the user
 
 ### Request Body
 ```typescript
 {
-  message: string;      // Le message de l'utilisateur
-  threadId?: string;    // ID du thread (optionnel)
-  userId?: string;      // ID de l'utilisateur (optionnel)
+  message: string;      // User's message
+  threadId?: string;    // Thread ID (optional)
+  userId?: string;      // User ID (optional)
 }
 ```
 
 ### Response: Server-Sent Events
 
-**Types d'événements:**
+**Event types:**
 
-1. **start** - Début du stream
+1. **start** — Start of stream
 ```json
 {
   "type": "start",
@@ -77,7 +77,7 @@ curl -X POST http://localhost:3000/api/chat/invoke \
 }
 ```
 
-2. **token** - Token de texte streamé
+2. **token** — Streamed text token
 ```json
 {
   "type": "token",
@@ -85,7 +85,7 @@ curl -X POST http://localhost:3000/api/chat/invoke \
 }
 ```
 
-3. **complete** - Fin du stream
+3. **complete** — End of stream
 ```json
 {
   "type": "complete",
@@ -96,7 +96,7 @@ curl -X POST http://localhost:3000/api/chat/invoke \
 }
 ```
 
-4. **error** - Erreur
+4. **error** — Error
 ```json
 {
   "type": "error",
@@ -107,7 +107,7 @@ curl -X POST http://localhost:3000/api/chat/invoke \
 }
 ```
 
-### Exemple
+### Example
 ```bash
 curl -X POST http://localhost:3000/api/chat/stream \
   -H "Content-Type: application/json" \
@@ -130,21 +130,21 @@ data: {"type":"complete","data":{"threadId":"thread-123","response":"That sounds
 
 ---
 
-## 📊 Comparaison
+## 📊 Comparison
 
-| Caractéristique | `/api/chat/invoke` | `/api/chat/stream` |
+| Feature | `/api/chat/invoke` | `/api/chat/stream` |
 |----------------|-------------------|-------------------|
-| **Type** | Request/Response classique | Server-Sent Events |
-| **Latence** | Attend la réponse complète | Streaming progressif |
-| **UX** | Simple, direct | Meilleure (feedback immédiat) |
-| **Complexité** | Faible | Moyenne |
-| **Use case** | APIs, backends, scripts | UIs web, chat interfaces |
+| **Type** | Classic Request/Response | Server-Sent Events |
+| **Latency** | Waits for full response | Progressive streaming |
+| **UX** | Simple, direct | Better (immediate feedback) |
+| **Complexity** | Low | Medium |
+| **Use case** | APIs, backends, scripts | Web UIs, chat interfaces |
 
 ---
 
-## 🔄 Continuer une conversation
+## 🔄 Continue a conversation
 
-Les deux routes supportent la continuation de conversation via `threadId` :
+Both routes support conversation continuation via `threadId`:
 
 ```bash
 # Première requête
@@ -152,7 +152,7 @@ curl -X POST http://localhost:3000/api/chat/invoke \
   -H "Content-Type: application/json" \
   -d '{"message": "Hello!"}'
 
-# Réponse: {"threadId": "thread-123", "response": "..."}
+# Response: {"threadId": "thread-123", "response": "..."}
 
 # Requête suivante avec le même threadId
 curl -X POST http://localhost:3000/api/chat/invoke \
@@ -165,16 +165,16 @@ curl -X POST http://localhost:3000/api/chat/invoke \
 
 ---
 
-## 💻 Utilisation en JavaScript
+## 💻 JavaScript Usage
 
-### Invoke classique
+### Classic invoke
 ```javascript
 const response = await fetch('/api/chat/invoke', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     message: 'Hello!',
-    threadId: existingThreadId // optionnel
+    threadId: existingThreadId // optional
   })
 });
 
@@ -182,14 +182,14 @@ const data = await response.json();
 console.log(data.response);
 ```
 
-### Stream SSE
+### SSE stream
 ```javascript
 const response = await fetch('/api/chat/stream', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     message: 'Hello!',
-    threadId: existingThreadId // optionnel
+    threadId: existingThreadId // optional
   })
 });
 
@@ -227,7 +227,7 @@ while (true) {
 
 ## ⚙️ Configuration
 
-### Variables d'environnement
+### Environment variables
 ```bash
 # OpenAI
 OPENAI_API_KEY=sk-...
@@ -236,7 +236,7 @@ OPENAI_API_KEY=sk-...
 AMADEUS_URL=https://mcp-amadeus.vercel.app/api/mcp
 AMADEUS_BEARER_TOKEN=...
 
-# Interrupt mode (pour tests HITL)
+# Interrupt mode (for HITL tests)
 IS_INTERRUPT=false
 ```
 
@@ -259,12 +259,12 @@ curl -X POST http://localhost:3000/api/chat/stream \
 
 ---
 
-## 🎯 Recommandations
+## 🎯 Recommendations
 
-- **Pour des APIs backend** → Utilisez `/api/chat/invoke`
-- **Pour des interfaces web** → Utilisez `/api/chat/stream`
-- **Pour des scripts/CLI** → Utilisez `/api/chat/invoke`
-- **Pour un chat UI** → Utilisez `/api/chat/stream`
+- **For backend APIs** → Use `/api/chat/invoke`
+- **For web interfaces** → Use `/api/chat/stream`
+- **For scripts/CLI** → Use `/api/chat/invoke`
+- **For a chat UI** → Use `/api/chat/stream`
 
 ---
 
@@ -275,8 +275,9 @@ User → POST /api/chat/invoke → Agent → Response complète
 User → POST /api/chat/stream → Agent → SSE Stream → Tokens progressifs
 ```
 
-L'agent gère automatiquement :
-- La sélection des outils appropriés
-- L'exécution des outils
-- L'agrégation des résultats
-- La génération de la réponse finale
+The agent automatically handles:
+- Appropriate tool selection
+- Tool execution
+- Result aggregation
+- Final response generation
+
