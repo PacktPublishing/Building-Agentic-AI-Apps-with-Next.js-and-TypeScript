@@ -4,6 +4,51 @@ import { createAgent } from "langchain";
 import { MultiServerMCPClient } from "@langchain/mcp-adapters"; 
 import type { DynamicStructuredTool } from "@langchain/core/tools";
 import { config } from "../../config";
+import { z } from "zod";
+
+// Zod schemas for runtime validation
+const MessageContentSchema = z.object({
+    type: z.string(),
+    text: z.string().optional(),
+    id: z.string().optional(),
+    name: z.string().optional(),
+    input: z.union([z.string(), z.record(z.any())]).optional(),
+});
+
+const ToolCallSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    args: z.record(z.any()),
+});
+
+const BaseMessageSchema = z.object({
+    id: z.string().optional(),
+    type: z.string(),
+    content: z.union([
+        z.string(),
+        z.array(MessageContentSchema),
+        z.record(z.any())
+    ]),
+    tool_calls: z.array(ToolCallSchema).optional(),
+    name: z.string().optional(),
+    tool_call_id: z.string().optional(),
+    _getType: z.function().returns(z.string()).optional(),
+});
+
+const ToolResultSchema = z.object({
+    success: z.boolean(),
+    data: z.array(z.any()).optional(),
+    meta: z.object({
+        totalAvailable: z.number().optional(),
+    }).optional(),
+    error: z.string().optional(),
+});
+
+// TypeScript types inferred from Zod schemas
+type MessageContent = z.infer<typeof MessageContentSchema>;
+type ToolCall = z.infer<typeof ToolCallSchema>;
+type BaseMessage = z.infer<typeof BaseMessageSchema>;
+type ToolResult = z.infer<typeof ToolResultSchema>;
 
 class MyFirstAgent {
     private model: ChatAnthropic;
@@ -269,273 +314,356 @@ Always provide detailed and helpful responses based on the tool results.`;
         const stream = await this.graph.stream(
             { messages: [{ role: "user", content: message }] },
             config,
-            { streamMode: "updates" }  // Changed from "values" to "updates"
+            { streamMode: "updates" }
         );
 
-        let processedMessageIds = new Set<string>();
+        const processedMessageIds = new Set<string>();
 
         for await (const chunk of stream) {
             console.log('[streamStructured] Chunk received, keys:', Object.keys(chunk));
             
-            // Process each node update in the chunk
             for (const [nodeName, nodeData] of Object.entries(chunk)) {
-                console.log('[streamStructured] Processing node:', nodeName);
-                
-                // Extract messages from the node data
-                const messages = (nodeData as any)?.messages || (Array.isArray(nodeData) ? nodeData : null);
-                
-                if (!messages || !Array.isArray(messages)) {
-                    console.log('[streamStructured] No messages in node:', nodeName);
-                    continue;
-                }
-
-                console.log('[streamStructured] Messages in node:', messages.length);
+                const messages = this.extractMessagesFromNode(nodeData, nodeName);
+                if (!messages) continue;
 
                 for (const msg of messages) {
-                    const msgId = msg.id || `${msg.type}-${JSON.stringify(msg.content).substring(0, 50)}`;
-                    if (processedMessageIds.has(msgId)) {
-                        console.log('[streamStructured] Skipping already processed message');
-                        continue;
-                    }
-                    processedMessageIds.add(msgId);
+                    if (this.isMessageProcessed(msg, processedMessageIds)) continue;
+                    processedMessageIds.add(this.getMessageId(msg));
 
-                    console.log('[streamStructured] Processing message type:', msg.type || msg._getType?.());
-
-                    // Handle AI messages
-                    if (msg.type === 'ai' || msg._getType?.() === 'ai') {
-                        console.log('[streamStructured] AI message detected');
-                        // Extract content (can be string or array)
-                        let textContent = '';
-                        let toolCalls: any[] = [];
-
-                        if (Array.isArray(msg.content)) {
-                            for (const block of msg.content) {
-                                if (block.type === 'text') {
-                                    textContent += block.text;
-                                } else if (block.type === 'tool_use') {
-                                    toolCalls.push({
-                                        id: block.id,
-                                        name: block.name,
-                                        args: typeof block.input === 'string' ? JSON.parse(block.input) : block.input
-                                    });
-                                }
-                            }
-                        } else if (typeof msg.content === 'string') {
-                            textContent = msg.content;
-                        }
-
-                        // Also check tool_calls property
-                        if (msg.tool_calls && msg.tool_calls.length > 0) {
-                            toolCalls = msg.tool_calls;
-                        }
-
-                        // Emit thinking event (text before tool calls or final answer)
-                        if (textContent) {
-                            // Parse ReAct format to extract only the Thought part
-                            const thoughtMatch = textContent.match(/Thought:\s*([\s\S]+?)(?=\nAction:|$)/);
-                            const finalAnswerMatch = textContent.match(/Final Answer:\s*([\s\S]+?)$/);
-                            
-                            let cleanText = '';
-                            if (thoughtMatch) {
-                                cleanText = thoughtMatch[1].trim();
-                            } else if (finalAnswerMatch) {
-                                cleanText = finalAnswerMatch[1].trim();
-                            } else {
-                                // Fallback: remove prefixes
-                                cleanText = textContent
-                                    .replace(/^Thought:\s*/i, '')
-                                    .replace(/^Final Answer:\s*/i, '')
-                                    .replace(/Action:[\s\S]*$/, '')
-                                    .trim();
-                            }
-
-                            if (cleanText) {
-                                yield {
-                                    type: 'thinking' as const,
-                                    data: { content: cleanText }
-                                };
-                            }
-                        }
-
-                        // Emit tool call events
-                        for (const toolCall of toolCalls) {
-                            yield {
-                                type: 'tool_call_start' as const,
-                                data: {
-                                    toolName: toolCall.name,
-                                    args: toolCall.args,
-                                    toolCallId: toolCall.id
-                                }
-                            };
-                        }
+                    // Process AI messages
+                    if (this.isAIMessage(msg)) {
+                        yield* this.processAIMessage(msg);
                     }
 
-                    // Handle Tool messages (results)
-                    if (msg.type === 'tool' || msg._getType?.() === 'tool') {
-                        console.log('[streamStructured] Tool message detected, name:', msg.name);
-                        
-                        // Check if content is an error string
-                        if (typeof msg.content === 'string' && msg.content.startsWith('Error:')) {
-                            console.error('[streamStructured] Tool returned error:', msg.content);
-                            
-                            yield {
-                                type: 'error' as const,
-                                data: {
-                                    error: `Tool ${msg.name} failed`,
-                                    details: msg.content.substring(0, 200)
-                                }
-                            };
-                            continue; // Skip further processing
-                        }
-                        
-                        // Try to parse JSON, fallback to raw content if it fails
-                        let result;
-                        try {
-                            result = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content;
-                        } catch (e) {
-                            console.error('[streamStructured] Failed to parse tool result as JSON:', e);
-                            result = { success: false, error: msg.content };
-                            
-                            // Emit error event for failed tool
-                            yield {
-                                type: 'error' as const,
-                                data: {
-                                    error: `Tool ${msg.name} failed`,
-                                    details: typeof msg.content === 'string' ? msg.content.substring(0, 200) : 'Unknown error'
-                                }
-                            };
-                            continue; // Skip further processing
-                        }
-                        
-                        // Check if it's activities data (for UI component)
-                        if (msg.name === 'search_tours_activities' && result.success && result.data) {
-                            yield {
-                                type: 'ui_component' as const,
-                                data: {
-                                    component: 'ActivityList',
-                                    props: {
-                                        activities: result.data,
-                                        totalAvailable: result.meta?.totalAvailable || result.data.length
-                                    }
-                                }
-                            };
-                        }
-                        // Check if it's flights data (for UI component)
-                        else if (msg.name === 'search_flights' && result.success && result.data && result.data.length > 0) {
-                            // Transform Amadeus flight data to our format
-                            const flights = result.data.slice(0, 3).map((offer: any) => ({
-                                id: offer.id,
-                                price: {
-                                    amount: parseFloat(offer.price?.total || offer.price?.grandTotal || '0'),
-                                    currency: offer.price?.currency || 'EUR'
-                                },
-                                outbound: {
-                                    departure: {
-                                        airport: {
-                                            code: offer.itineraries[0]?.segments[0]?.departure?.iataCode || '',
-                                            name: offer.itineraries[0]?.segments[0]?.departure?.iataCode || ''
-                                        },
-                                        time: offer.itineraries[0]?.segments[0]?.departure?.at || ''
-                                    },
-                                    arrival: {
-                                        airport: {
-                                            code: offer.itineraries[0]?.segments[offer.itineraries[0].segments.length - 1]?.arrival?.iataCode || '',
-                                            name: offer.itineraries[0]?.segments[offer.itineraries[0].segments.length - 1]?.arrival?.iataCode || ''
-                                        },
-                                        time: offer.itineraries[0]?.segments[offer.itineraries[0].segments.length - 1]?.arrival?.at || ''
-                                    },
-                                    airline: {
-                                        code: offer.itineraries[0]?.segments[0]?.carrierCode || '',
-                                        name: offer.validatingAirlineCodes?.[0] || offer.itineraries[0]?.segments[0]?.carrierCode || ''
-                                    },
-                                    duration: offer.itineraries[0]?.duration?.replace('PT', '').replace('H', 'h ').replace('M', 'm') || '',
-                                    stops: (offer.itineraries[0]?.segments?.length || 1) - 1
-                                },
-                                inbound: {
-                                    departure: {
-                                        airport: {
-                                            code: offer.itineraries[1]?.segments[0]?.departure?.iataCode || '',
-                                            name: offer.itineraries[1]?.segments[0]?.departure?.iataCode || ''
-                                        },
-                                        time: offer.itineraries[1]?.segments[0]?.departure?.at || ''
-                                    },
-                                    arrival: {
-                                        airport: {
-                                            code: offer.itineraries[1]?.segments[offer.itineraries[1].segments.length - 1]?.arrival?.iataCode || '',
-                                            name: offer.itineraries[1]?.segments[offer.itineraries[1].segments.length - 1]?.arrival?.iataCode || ''
-                                        },
-                                        time: offer.itineraries[1]?.segments[offer.itineraries[1].segments.length - 1]?.arrival?.at || ''
-                                    },
-                                    airline: {
-                                        code: offer.itineraries[1]?.segments[0]?.carrierCode || '',
-                                        name: offer.validatingAirlineCodes?.[0] || offer.itineraries[1]?.segments[0]?.carrierCode || ''
-                                    },
-                                    duration: offer.itineraries[1]?.duration?.replace('PT', '').replace('H', 'h ').replace('M', 'm') || '',
-                                    stops: (offer.itineraries[1]?.segments?.length || 1) - 1
-                                }
-                            }));
-
-                            yield {
-                                type: 'ui_component' as const,
-                                data: {
-                                    component: 'FlightList',
-                                    props: { flights }
-                                }
-                            };
-                        }
-                        // Check if it's hotels data (for UI component)
-                        else if (msg.name === 'search_hotels' && result.success && result.data && Array.isArray(result.data) && result.data.length > 0) {
-                            console.log('[streamStructured] Processing hotels, count:', result.data.length);
-                            // Transform Amadeus hotel data to our format
-                            const hotels = result.data.slice(0, 4).map((hotelOffer: any) => {
-                                console.log('[streamStructured] Hotel offer:', hotelOffer.hotel?.name);
-                                return {
-                                id: hotelOffer.hotel?.hotelId || hotelOffer.id,
-                                name: hotelOffer.hotel?.name || 'Hotel',
-                                rating: 4, // Default rating as Amadeus doesn't provide it
-                                address: {
-                                    street: hotelOffer.hotel?.address?.lines?.[0] || '',
-                                    city: hotelOffer.hotel?.cityCode || '',
-                                    postalCode: hotelOffer.hotel?.address?.postalCode || ''
-                                },
-                                location: {
-                                    latitude: hotelOffer.hotel?.latitude || 0,
-                                    longitude: hotelOffer.hotel?.longitude || 0
-                                },
-                                description: hotelOffer.offers?.[0]?.room?.description?.text || 'Comfortable hotel room',
-                                amenities: ['WiFi', 'Air Conditioning', 'Room Service'], // Default amenities
-                                price: {
-                                    amount: parseFloat(hotelOffer.offers?.[0]?.price?.total || '0'),
-                                    currency: hotelOffer.offers?.[0]?.price?.currency || 'EUR'
-                                },
-                                images: ['https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800'] // Placeholder
-                            };
-                            });
-
-                            yield {
-                                type: 'ui_component' as const,
-                                data: {
-                                    component: 'HotelList',
-                                    props: { hotels }
-                                }
-                            };
-                        }
-                        else {
-                            // Generic tool result
-                            yield {
-                                type: 'tool_result' as const,
-                                data: {
-                                    toolName: msg.name,
-                                    toolCallId: msg.tool_call_id,
-                                    result: result,
-                                    summary: this.summarizeToolResult(msg.name, result)
-                                }
-                            };
-                        }
+                    // Process Tool messages
+                    if (this.isToolMessage(msg)) {
+                        yield* this.processToolMessage(msg);
                     }
                 }
             }
         }
+    }
+
+    /**
+     * Extract messages from node data
+     */
+    private extractMessagesFromNode(nodeData: any, nodeName: string): BaseMessage[] | null {
+        const messages = nodeData?.messages || (Array.isArray(nodeData) ? nodeData : null);
+        
+        if (!messages || !Array.isArray(messages)) {
+            console.log('[streamStructured] No messages in node:', nodeName);
+            return null;
+        }
+
+        console.log('[streamStructured] Messages in node:', messages.length);
+        return messages;
+    }
+
+    /**
+     * Check if message has already been processed
+     */
+    private isMessageProcessed(msg: BaseMessage, processedIds: Set<string>): boolean {
+        const msgId = this.getMessageId(msg);
+        if (processedIds.has(msgId)) {
+            console.log('[streamStructured] Skipping already processed message');
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Generate unique message ID
+     */
+    private getMessageId(msg: BaseMessage): string {
+        return msg.id || `${msg.type}-${JSON.stringify(msg.content).substring(0, 50)}`;
+    }
+
+    /**
+     * Check if message is an AI message
+     */
+    private isAIMessage(msg: BaseMessage): boolean {
+        return msg.type === 'ai' || msg._getType?.() === 'ai';
+    }
+
+    /**
+     * Check if message is a tool message
+     */
+    private isToolMessage(msg: BaseMessage): boolean {
+        return msg.type === 'tool' || msg._getType?.() === 'tool';
+    }
+
+    /**
+     * Process AI messages and yield events
+     */
+    private async *processAIMessage(msg: BaseMessage) {
+        console.log('[streamStructured] AI message detected');
+        
+        const { textContent, toolCalls } = this.extractAIMessageContent(msg);
+
+        // Emit thinking event
+        if (textContent) {
+            const cleanText = this.extractThinkingText(textContent);
+            if (cleanText) {
+                yield {
+                    type: 'thinking' as const,
+                    data: { content: cleanText }
+                };
+            }
+        }
+
+        // Emit tool call events
+        for (const toolCall of toolCalls) {
+            yield {
+                type: 'tool_call_start' as const,
+                data: {
+                    toolName: toolCall.name,
+                    args: toolCall.args,
+                    toolCallId: toolCall.id
+                }
+            };
+        }
+    }
+
+    /**
+     * Extract content and tool calls from AI message
+     */
+    private extractAIMessageContent(msg: BaseMessage): { textContent: string; toolCalls: ToolCall[] } {
+        let textContent = '';
+        let toolCalls: any[] = [];
+
+        if (Array.isArray(msg.content)) {
+            for (const block of msg.content) {
+                if (block.type === 'text') {
+                    textContent += block.text;
+                } else if (block.type === 'tool_use') {
+                    toolCalls.push({
+                        id: block.id,
+                        name: block.name,
+                        args: typeof block.input === 'string' ? JSON.parse(block.input) : block.input
+                    });
+                }
+            }
+        } else if (typeof msg.content === 'string') {
+            textContent = msg.content;
+        }
+
+        // Also check tool_calls property
+        if (msg.tool_calls && msg.tool_calls.length > 0) {
+            toolCalls = msg.tool_calls;
+        }
+
+        return { textContent, toolCalls };
+    }
+
+    /**
+     * Extract clean thinking text from ReAct format
+     */
+    private extractThinkingText(textContent: string): string {
+        const thoughtMatch = textContent.match(/Thought:\s*([\s\S]+?)(?=\nAction:|$)/);
+        const finalAnswerMatch = textContent.match(/Final Answer:\s*([\s\S]+?)$/);
+        
+        if (thoughtMatch) {
+            return thoughtMatch[1].trim();
+        } else if (finalAnswerMatch) {
+            return finalAnswerMatch[1].trim();
+        } else {
+            // Fallback: remove prefixes
+            return textContent
+                .replace(/^Thought:\s*/i, '')
+                .replace(/^Final Answer:\s*/i, '')
+                .replace(/Action:[\s\S]*$/, '')
+                .trim();
+        }
+    }
+
+    /**
+     * Process tool messages and yield events
+     */
+    private async *processToolMessage(msg: BaseMessage) {
+        console.log('[streamStructured] Tool message detected, name:', msg.name);
+        
+        // Handle errors
+        if (typeof msg.content === 'string' && msg.content.startsWith('Error:')) {
+            console.error('[streamStructured] Tool returned error:', msg.content);
+            yield {
+                type: 'error' as const,
+                data: {
+                    error: `Tool ${msg.name || 'unknown'} failed`,
+                    details: msg.content.substring(0, 200)
+                }
+            };
+            return;
+        }
+        
+        // Parse tool result
+        const result = this.parseToolResult(msg);
+        if (!result) {
+            yield {
+                type: 'error' as const,
+                data: {
+                    error: `Tool ${msg.name || 'unknown'} failed`,
+                    details: typeof msg.content === 'string' ? msg.content.substring(0, 200) : 'Unknown error'
+                }
+            };
+            return;
+        }
+        
+        // Transform and emit UI component or generic result
+        const uiComponent = this.transformToUIComponent(msg.name || 'unknown', result);
+        if (uiComponent) {
+            yield uiComponent;
+        } else {
+            yield {
+                type: 'tool_result' as const,
+                data: {
+                    toolName: msg.name,
+                    toolCallId: msg.tool_call_id,
+                    result: result,
+                    summary: this.summarizeToolResult(msg.name || 'unknown', result)
+                }
+            };
+        }
+    }
+
+    /**
+     * Parse tool result from message content with Zod validation
+     */
+    private parseToolResult(msg: BaseMessage): ToolResult | null {
+        try {
+            const parsed = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content;
+            
+            // Validate with Zod schema
+            const validationResult = ToolResultSchema.safeParse(parsed);
+            
+            if (validationResult.success) {
+                return validationResult.data;
+            } else {
+                console.error('[streamStructured] Tool result validation failed:', validationResult.error.format());
+                return null;
+            }
+        } catch (e) {
+            console.error('[streamStructured] Failed to parse tool result as JSON:', e);
+            return null;
+        }
+    }
+
+    /**
+     * Transform tool result to UI component event
+     */
+    private transformToUIComponent(toolName: string, result: ToolResult): any | null {
+        if (toolName === 'search_tours_activities' && result.success && result.data) {
+            return {
+                type: 'ui_component' as const,
+                data: {
+                    component: 'ActivityList',
+                    props: {
+                        activities: result.data,
+                        totalAvailable: result.meta?.totalAvailable || result.data.length
+                    }
+                }
+            };
+        }
+        
+        if (toolName === 'search_flights' && result.success && result.data && result.data.length > 0) {
+            return {
+                type: 'ui_component' as const,
+                data: {
+                    component: 'FlightList',
+                    props: { flights: this.transformFlightsData(result.data) }
+                }
+            };
+        }
+        
+        if (toolName === 'search_hotels' && result.success && result.data && Array.isArray(result.data) && result.data.length > 0) {
+            console.log('[streamStructured] Processing hotels, count:', result.data.length);
+            return {
+                type: 'ui_component' as const,
+                data: {
+                    component: 'HotelList',
+                    props: { hotels: this.transformHotelsData(result.data) }
+                }
+            };
+        }
+        
+        return null;
+    }
+
+    /**
+     * Transform Amadeus flight data to UI format
+     */
+    private transformFlightsData(data: any[]): any[] {
+        return data.slice(0, 3).map((offer: any) => ({
+            id: offer.id,
+            price: {
+                amount: parseFloat(offer.price?.total || offer.price?.grandTotal || '0'),
+                currency: offer.price?.currency || 'EUR'
+            },
+            outbound: this.transformItinerary(offer.itineraries[0], offer.validatingAirlineCodes),
+            inbound: this.transformItinerary(offer.itineraries[1], offer.validatingAirlineCodes)
+        }));
+    }
+
+    /**
+     * Transform flight itinerary
+     */
+    private transformItinerary(itinerary: any, validatingCodes: string[]): any {
+        if (!itinerary) return {};
+        
+        const firstSegment = itinerary.segments[0];
+        const lastSegment = itinerary.segments[itinerary.segments.length - 1];
+        
+        return {
+            departure: {
+                airport: {
+                    code: firstSegment?.departure?.iataCode || '',
+                    name: firstSegment?.departure?.iataCode || ''
+                },
+                time: firstSegment?.departure?.at || ''
+            },
+            arrival: {
+                airport: {
+                    code: lastSegment?.arrival?.iataCode || '',
+                    name: lastSegment?.arrival?.iataCode || ''
+                },
+                time: lastSegment?.arrival?.at || ''
+            },
+            airline: {
+                code: firstSegment?.carrierCode || '',
+                name: validatingCodes?.[0] || firstSegment?.carrierCode || ''
+            },
+            duration: itinerary.duration?.replace('PT', '').replace('H', 'h ').replace('M', 'm') || '',
+            stops: (itinerary.segments?.length || 1) - 1
+        };
+    }
+
+    /**
+     * Transform Amadeus hotel data to UI format
+     */
+    private transformHotelsData(data: any[]): any[] {
+        return data.slice(0, 4).map((hotelOffer: any) => {
+            console.log('[streamStructured] Hotel offer:', hotelOffer.hotel?.name);
+            return {
+                id: hotelOffer.hotel?.hotelId || hotelOffer.id,
+                name: hotelOffer.hotel?.name || 'Hotel',
+                rating: 4,
+                address: {
+                    street: hotelOffer.hotel?.address?.lines?.[0] || '',
+                    city: hotelOffer.hotel?.cityCode || '',
+                    postalCode: hotelOffer.hotel?.address?.postalCode || ''
+                },
+                location: {
+                    latitude: hotelOffer.hotel?.latitude || 0,
+                    longitude: hotelOffer.hotel?.longitude || 0
+                },
+                description: hotelOffer.offers?.[0]?.room?.description?.text || 'Comfortable hotel room',
+                amenities: ['WiFi', 'Air Conditioning', 'Room Service'],
+                price: {
+                    amount: parseFloat(hotelOffer.offers?.[0]?.price?.total || '0'),
+                    currency: hotelOffer.offers?.[0]?.price?.currency || 'EUR'
+                },
+                images: ['https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800']
+            };
+        });
     }
 
     /**
