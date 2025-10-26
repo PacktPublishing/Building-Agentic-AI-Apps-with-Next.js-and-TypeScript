@@ -1,6 +1,6 @@
 import { ChatAnthropic } from "@langchain/anthropic";
 import { MemorySaver } from "@langchain/langgraph";
-import { createReactAgent } from "@langchain/langgraph/prebuilt";
+import { createAgent } from "langchain";
 import { MultiServerMCPClient } from "@langchain/mcp-adapters"; 
 import type { DynamicStructuredTool } from "@langchain/core/tools";
 import { config } from "../../config";
@@ -67,11 +67,11 @@ class MyFirstAgent {
 Use the tools available to search for flights, hotels, activities, and other travel information.
 Always provide detailed and helpful responses based on the tool results.`;
 
-        this.graph = createReactAgent({
-            llm: this.model,
+        this.graph = createAgent({
+            model: this.model,
             tools: this.tools,
-            checkpointSaver: this.memory,
-            messageModifier: systemPrompt
+            checkpointer: this.memory,
+            systemPrompt: systemPrompt
         });
 
         this.isInitialized = true;
@@ -162,8 +162,10 @@ Always provide detailed and helpful responses based on the tool results.`;
             for await (const chunk of stream) {
                 console.log('Continue stream chunk:', JSON.stringify(chunk, null, 2));
                 
-                if (chunk.agent?.messages) {
-                    for (const message of chunk.agent.messages) {
+                // LangChain v1: node name changed from 'agent' to 'model'
+                const nodeMessages = chunk.model?.messages || chunk.agent?.messages;
+                if (nodeMessages) {
+                    for (const message of nodeMessages) {
                         if (message.content && typeof message.content === 'string') {
                             finalResponse = message.content;
                             console.log('Found final response:', finalResponse);
@@ -228,8 +230,8 @@ Always provide detailed and helpful responses based on the tool results.`;
         for await (const chunk of stream) {
             console.log('Stream chunk keys:', Object.keys(chunk));
             
-            // LangGraph streams with 'agent' key containing messages
-            const messages = chunk.agent?.messages || chunk.messages;
+            // LangChain v1: node name changed from 'agent' to 'model'
+            const messages = chunk.model?.messages || chunk.agent?.messages || chunk.messages;
             
             if (messages && Array.isArray(messages)) {
                 const lastMsg = messages[messages.length - 1];
