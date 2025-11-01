@@ -3,11 +3,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { useStreamChat } from '../../hooks/useStreamChat';
 import { MessageRenderer } from '../../components/MessageRenderer';
+import { OptimizationStats } from '../../components/OptimizationStats';
 
 export default function AIChatPage() {
     const [ testMessage, _setTestMessage ] = useState('Hello, I want to go to Barcelone with my wife for a romantic getaway, next week for a week. I\'m looking for flights from Paris, hotels, and activities there.');
     const [input, setInput] = useState('');
-    const { messages, isStreaming, error, sendMessage, clearMessages } = useStreamChat();
+    const { messages, isStreaming, error, sendMessage, clearMessages, threadId } = useStreamChat();
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -42,6 +43,10 @@ export default function AIChatPage() {
                             <h1 className="text-xl font-bold text-foreground">
                                 AI Travel Assistant
                             </h1>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                Context Engineering Active
+                            </p>
                         </div>
                     </div>
                     {messages.length > 0 && (
@@ -168,6 +173,9 @@ export default function AIChatPage() {
                         </button>
                     </div>
                 </form>
+
+                {/* Optimization Stats */}
+                <OptimizationStats threadId={threadId} messageCount={messages.length} />
             </div>
         </div>
     );
