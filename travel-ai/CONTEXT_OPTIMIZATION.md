@@ -1,29 +1,29 @@
 # 🚀 Context Engineering & Token Optimization
 
-## Vue d'ensemble
+## Overview
 
-Ce système d'optimisation réduit la consommation de tokens de **60-70%** en utilisant le LLM lui-même pour :
-1. **Extraire les métadonnées** utilisateur (préférences, contexte)
-2. **Résumer les conversations** de manière intelligente
-3. **Gérer l'historique** avec une fenêtre glissante
+This optimization system reduces token consumption by **60-70%** by using the LLM itself to:
+1. **Extract user metadata** (preferences, context)
+2. **Summarize conversations** intelligently
+3. **Manage history** with a sliding window
 
-## 🎯 Problème résolu
+## 🎯 Problem Solved
 
-### Avant l'optimisation
+### Before Optimization
 ```
-❌ Conversation de 10 tours : ~50-100k tokens
-❌ Historique complet envoyé à chaque message
-❌ Prompt répété sans contexte
-❌ Coût élevé et latence importante
+❌ 10-turn conversation: ~50-100k tokens
+❌ Full history sent with every message
+❌ Repeated prompt without context
+❌ High cost and significant latency
 ```
 
-### Après l'optimisation
+### After Optimization
 ```
-✅ Conversation de 10 tours : ~15-30k tokens
-✅ Historique trimé (10 messages max)
-✅ Métadonnées extraites et réutilisées
-✅ Résumés intelligents par LLM
-✅ Réduction de 60-70% des coûts
+✅ 10-turn conversation: ~15-30k tokens
+✅ Trimmed history (10 messages max)
+✅ Extracted and reused metadata
+✅ Intelligent LLM summaries
+✅ 60-70% cost reduction
 ```
 
 ## 📁 Architecture
