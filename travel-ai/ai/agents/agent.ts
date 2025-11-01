@@ -2,7 +2,7 @@ import { ChatAnthropic } from "@langchain/anthropic";
 import { MemorySaver } from "@langchain/langgraph";
 import { createAgent } from "langchain";
 import { MultiServerMCPClient } from "@langchain/mcp-adapters"; 
-import type { DynamicStructuredTool } from "@langchain/core/tools";
+import { DynamicStructuredTool } from "@langchain/core/tools";
 import { config } from "../../config";
 import { z } from "zod";
 
@@ -104,7 +104,30 @@ class MyFirstAgent {
 
 
         const mcpTools = await this.mcpClient.getTools();
-        this.tools = [...mcpTools]; 
+        
+        // Outil pour obtenir la date actuelle
+        const getCurrentDateTool = new DynamicStructuredTool({
+            name: "get_current_date",
+            description: "Returns the current date with day, month, and year. Use this tool when you need to know today's date.",
+            schema: z.object({}),
+            func: async () => {
+                const now = new Date();
+                return JSON.stringify({
+                    day: now.getDate(),
+                    month: now.getMonth() + 1,
+                    year: now.getFullYear(),
+                    formatted: now.toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    }),
+                    iso: now.toISOString()
+                });
+            }
+        });
+        
+        this.tools = [...mcpTools, getCurrentDateTool]; 
 
         // Create the ReAct agent with loaded tools and custom prompt
         const systemPrompt = `You are a helpful travel planning assistant. You have access to various tools to help users plan their trips.
@@ -436,10 +459,25 @@ Always provide detailed and helpful responses based on the tool results.`;
                 if (block.type === 'text') {
                     textContent += block.text;
                 } else if (block.type === 'tool_use') {
+                    let args = block.input;
+                    // Parse string input, handle empty strings
+                    if (typeof block.input === 'string') {
+                        if (block.input.trim() === '') {
+                            args = {};
+                        } else {
+                            try {
+                                args = JSON.parse(block.input);
+                            } catch (e) {
+                                console.warn('[extractAIMessageContent] Failed to parse tool input, using empty object:', block.input);
+                                args = {};
+                            }
+                        }
+                    }
+                    
                     toolCalls.push({
                         id: block.id,
                         name: block.name,
-                        args: typeof block.input === 'string' ? JSON.parse(block.input) : block.input
+                        args: args
                     });
                 }
             }
@@ -482,9 +520,20 @@ Always provide detailed and helpful responses based on the tool results.`;
     private async *processToolMessage(msg: BaseMessage) {
         console.log('[streamStructured] Tool message detected, name:', msg.name);
         
-        // Handle errors
+        // Handle errors - log but don't show to user for non-critical tools
         if (typeof msg.content === 'string' && msg.content.startsWith('Error:')) {
-            console.error('[streamStructured] Tool returned error:', msg.content);
+            console.error('[streamStructured] Tool returned error:', msg.name, msg.content);
+            // Don't show errors for optional/enhancement tools or data format errors
+            const optionalTools = ['get_destination_experiences', 'get_current_date'];
+            const isDataFormatError = msg.content.includes('Cannot read properties of undefined');
+            
+            if (optionalTools.includes(msg.name || '') || isDataFormatError) {
+                // Log a user-friendly message for data errors
+                if (isDataFormatError && msg.name) {
+                    console.warn(`[streamStructured] ${msg.name} returned invalid data format, skipping`);
+                }
+                return;
+            }
             yield {
                 type: 'error' as const,
                 data: {
@@ -492,6 +541,13 @@ Always provide detailed and helpful responses based on the tool results.`;
                     details: msg.content.substring(0, 200)
                 }
             };
+            return;
+        }
+        
+        // Special handling for get_current_date tool (doesn't follow standard format)
+        if (msg.name === 'get_current_date') {
+            console.log('[streamStructured] get_current_date result:', msg.content);
+            // Don't yield anything for this tool, it's used internally by the agent
             return;
         }
         
@@ -592,6 +648,10 @@ Always provide detailed and helpful responses based on the tool results.`;
      * Transform Amadeus flight data to UI format
      */
     private transformFlightsData(data: any[]): any[] {
+        if (!data || !Array.isArray(data)) {
+            console.warn('[transformFlightsData] Invalid data received:', data);
+            return [];
+        }
         return data.slice(0, 3).map((offer: any) => ({
             id: offer.id,
             price: {
@@ -640,6 +700,10 @@ Always provide detailed and helpful responses based on the tool results.`;
      * Transform Amadeus hotel data to UI format
      */
     private transformHotelsData(data: any[]): any[] {
+        if (!data || !Array.isArray(data)) {
+            console.warn('[transformHotelsData] Invalid data received:', data);
+            return [];
+        }
         return data.slice(0, 4).map((hotelOffer: any) => {
             console.log('[streamStructured] Hotel offer:', hotelOffer.hotel?.name);
             return {

@@ -5,6 +5,7 @@ import { useStreamChat } from '../../hooks/useStreamChat';
 import { MessageRenderer } from '../../components/MessageRenderer';
 
 export default function AIChatPage() {
+    const [ testMessage, _setTestMessage ] = useState('Hello, I want to go to Barcelone with my wife for a romantic getaway, next week for a week. I\'m looking for flights from Paris, hotels, and activities there.');
     const [input, setInput] = useState('');
     const { messages, isStreaming, error, sendMessage, clearMessages } = useStreamChat();
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -41,7 +42,6 @@ export default function AIChatPage() {
                             <h1 className="text-xl font-bold text-foreground">
                                 AI Travel Assistant
                             </h1>
-                            <p className="text-xs text-muted-foreground">Powered by LangGraph</p>
                         </div>
                     </div>
                     {messages.length > 0 && (
@@ -76,35 +76,15 @@ export default function AIChatPage() {
                             </p>
                             <div className="flex flex-wrap gap-3 justify-center max-w-3xl mx-auto">
                                 <button
-                                    onClick={() => sendMessage('Find activities in Paris')}
+                                    onClick={() => sendMessage(testMessage)}
                                     className="group flex items-center gap-2 px-6 py-3 bg-card hover:bg-accent text-foreground rounded-xl border-2 border-border hover:border-primary transition-all shadow-sm hover:shadow-md"
                                 >
-                                    <span className="text-2xl">🗼</span>
-                                    <span className="font-medium">Find activities in Paris</span>
+                                    <span className="text-2xl">{testMessage.slice(0, 10)} ...</span>
                                     <svg className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                     </svg>
                                 </button>
-                                <button
-                                    onClick={() => sendMessage('Search hotels in Tokyo')}
-                                    className="group flex items-center gap-2 px-6 py-3 bg-card hover:bg-accent text-foreground rounded-xl border-2 border-border hover:border-primary transition-all shadow-sm hover:shadow-md"
-                                >
-                                    <span className="text-2xl">🏯</span>
-                                    <span className="font-medium">Search hotels in Tokyo</span>
-                                    <svg className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </button>
-                                <button
-                                    onClick={() => sendMessage('Find flights to New York')}
-                                    className="group flex items-center gap-2 px-6 py-3 bg-card hover:bg-accent text-foreground rounded-xl border-2 border-border hover:border-primary transition-all shadow-sm hover:shadow-md"
-                                >
-                                    <span className="text-2xl">✈️</span>
-                                    <span className="font-medium">Find flights to New York</span>
-                                    <svg className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </button>
+
                             </div>
                         </div>
                     )}
