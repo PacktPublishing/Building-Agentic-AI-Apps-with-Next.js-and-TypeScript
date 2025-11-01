@@ -90,7 +90,7 @@ The system prompt is automatically enriched:
 [Base Prompt]
 +
 📋 CONVERSATION CONTEXT:
-[Résumé LLM de la conversation]
+[LLM conversation summary]
 +
 👤 USER PREFERENCES:
 - budget: mid-range
@@ -101,24 +101,24 @@ The system prompt is automatically enriched:
 - travelers: 2
 ```
 
-## 🚀 Utilisation
+## 🚀 Usage
 
-### Dans le code
+### In Code
 
-L'optimisation est **automatique** ! Aucun changement nécessaire dans votre code existant :
+Optimization is **automatic**! No changes needed in your existing code:
 
 ```typescript
-// Utilisation normale
+// Normal usage
 const stream = agent.streamStructured(message, threadId);
 
-// Le context manager s'occupe de tout :
-// - Extraction de métadonnées
-// - Résumé si nécessaire
-// - Trim de l'historique
-// - Prompt dynamique
+// The context manager handles everything:
+// - Metadata extraction
+// - Summarization when needed
+// - History trimming
+// - Dynamic prompt
 ```
 
-### Obtenir les statistiques
+### Get Statistics
 
 ```typescript
 const stats = await agent.getContextStats(threadId);
@@ -134,107 +134,107 @@ console.log(stats);
 // }
 ```
 
-### Tester l'optimisation
+### Test Optimization
 
 ```bash
 pnpm test:context
 ```
 
-Ce script :
-- Simule une conversation de 8 messages
-- Affiche les stats à chaque étape
-- Calcule les gains en tokens
-- Montre les métadonnées extraites
-- Affiche le résumé généré
+This script:
+- Simulates an 8-message conversation
+- Displays stats at each step
+- Calculates token savings
+- Shows extracted metadata
+- Displays generated summary
 
-## 📊 Exemple de sortie
+## 📊 Example Output
 
 ```
-🧪 Test d'optimisation de contexte
+🧪 Context optimization test
 
 💬 Message 1: "Hello, I want to go to Barcelona..."
    📈 Messages: 2
-   🔢 Tokens estimés: 450
-   📝 Résumé: ❌
-   🏷️  Métadonnées: ❌
+   🔢 Estimated tokens: 450
+   📝 Summary: ❌
+   🏷️  Metadata: ❌
 
 💬 Message 3: "Around 500 euros per person"
    📈 Messages: 6
-   🔢 Tokens estimés: 1250
-   📝 Résumé: ❌
-   🏷️  Métadonnées: ✅
-   👤 Métadonnées extraites:
-      - Préférences: { budget: "mid-range" }
+   🔢 Estimated tokens: 1250
+   📝 Summary: ❌
+   🏷️  Metadata: ✅
+   👤 Extracted metadata:
+      - Preferences: { budget: "mid-range" }
 
 💬 Message 7: "We love cultural visits..."
    📈 Messages: 14
-   🔢 Tokens estimés: 2800
-   📝 Résumé: ✅
-   🏷️  Métadonnées: ✅
-   📋 Résumé: "User planning romantic Barcelona trip..."
+   🔢 Estimated tokens: 2800
+   📝 Summary: ✅
+   🏷️  Metadata: ✅
+   📋 Summary: "User planning romantic Barcelona trip..."
 
-📊 RÉSUMÉ FINAL
+📊 FINAL SUMMARY
 ═══════════════════════════════════════
 Total messages: 16
-Tokens estimés: 3200
-Résumé actif: ✅
-Métadonnées actives: ✅
+Estimated tokens: 3200
+Active summary: ✅
+Active metadata: ✅
 
-💰 GAINS ESTIMÉS
+💰 ESTIMATED SAVINGS
 ═══════════════════════════════════════
-Sans optimisation: ~8000 tokens
-Avec optimisation: ~3200 tokens
-Économie: ~4800 tokens (60.0%)
+Without optimization: ~8000 tokens
+With optimization: ~3200 tokens
+Savings: ~4800 tokens (60.0%)
 ```
 
 ## ⚙️ Configuration
 
-Ajuster les paramètres dans `agent.ts` :
+Adjust parameters in `agent.ts`:
 
 ```typescript
 this.contextManager = new ContextManager(this.model, {
-    maxHistoryMessages: 10,           // Nombre de messages à garder
-    enableSummarization: true,         // Activer les résumés
-    summaryTriggerThreshold: 6,       // Résumer après N messages
-    enableMetadataExtraction: true,    // Extraire les métadonnées
+    maxHistoryMessages: 10,           // Number of messages to keep
+    enableSummarization: true,         // Enable summaries
+    summaryTriggerThreshold: 6,       // Summarize after N messages
+    enableMetadataExtraction: true,    // Extract metadata
 });
 ```
 
-## 🎨 Personnalisation
+## 🎨 Customization
 
-### Modifier le prompt de base
+### Modify Base Prompt
 
-Éditer `ai/prompts/system-prompt.ts` :
+Edit `ai/prompts/system-prompt.ts`:
 
 ```typescript
 export const TRAVEL_ASSISTANT_PROMPT = `
-Votre prompt personnalisé...
+Your custom prompt...
 `;
 ```
 
-### Ajuster l'extraction de métadonnées
+### Adjust Metadata Extraction
 
-Modifier le prompt dans `context-manager.ts` > `extractMetadata()` :
+Modify the prompt in `context-manager.ts` > `extractMetadata()`:
 
 ```typescript
 const prompt = `Extract travel preferences...
-- Vos champs personnalisés
+- Your custom fields
 `;
 ```
 
-### Personnaliser les résumés
+### Customize Summaries
 
-Modifier le prompt dans `context-manager.ts` > `summarizeHistory()` :
+Modify the prompt in `context-manager.ts` > `summarizeHistory()`:
 
 ```typescript
 const prompt = `Summarize focusing on:
-- Vos critères personnalisés
+- Your custom criteria
 `;
 ```
 
 ## 📈 Monitoring
 
-Les logs automatiques vous informent :
+Automatic logs keep you informed:
 
 ```
 [Agent] Current conversation: 8 messages, ~12500 tokens
@@ -244,36 +244,36 @@ Les logs automatiques vous informent :
 
 ## 💡 Best Practices
 
-### ✅ À faire
+### ✅ Do
 
-1. **Surveiller les tokens** avec `getContextStats()`
-2. **Ajuster les seuils** selon vos besoins
-3. **Tester régulièrement** avec `pnpm test:context`
-4. **Analyser les métadonnées** extraites pour vérifier la qualité
+1. **Monitor tokens** with `getContextStats()`
+2. **Adjust thresholds** according to your needs
+3. **Test regularly** with `pnpm test:context`
+4. **Analyze extracted metadata** to verify quality
 
-### ❌ À éviter
+### ❌ Don't
 
-1. Ne pas désactiver les optimisations sans raison
-2. Ne pas augmenter `maxHistoryMessages` au-delà de 15
-3. Ne pas réduire `summaryTriggerThreshold` en dessous de 4
+1. Don't disable optimizations without reason
+2. Don't increase `maxHistoryMessages` beyond 15
+3. Don't reduce `summaryTriggerThreshold` below 4
 
 ## 🔍 Debugging
 
-### Vérifier les métadonnées extraites
+### Check Extracted Metadata
 
 ```typescript
 const metadata = agent.getContextManager().getMetadata(threadId);
-console.log('Métadonnées:', metadata);
+console.log('Metadata:', metadata);
 ```
 
-### Vérifier le résumé
+### Check Summary
 
 ```typescript
 const summary = agent.getContextManager().getSummary(threadId);
-console.log('Résumé:', summary);
+console.log('Summary:', summary);
 ```
 
-### Calculer les tokens
+### Calculate Tokens
 
 ```typescript
 const state = await agent.getState(threadId);
@@ -283,24 +283,15 @@ console.log('Tokens:', tokens);
 
 ## 🚧 Limitations
 
-1. **Estimation de tokens** : Approximative (1 token ≈ 4 chars)
-2. **Extraction LLM** : Peut échouer si le format JSON n'est pas respecté
-3. **Coût des résumés** : Chaque résumé/extraction consomme des tokens
+1. **Token estimation**: Approximate (1 token ≈ 4 chars)
+2. **LLM extraction**: May fail if JSON format is not respected
+3. **Summary cost**: Each summary/extraction consumes tokens
 
-## 🎯 Prochaines étapes
 
-- [ ] Implémenter un cache pour les métadonnées
-- [ ] Ajouter des métriques Prometheus
-- [ ] Créer un dashboard de monitoring
-- [ ] Optimiser les prompts d'extraction
-- [ ] Ajouter des tests unitaires
+## 📚 Resources
 
-## 📚 Ressources
-
-- [Documentation Context Manager](./ai/context/README.md)
+- [Context Manager Documentation](./ai/context/README.md)
 - [LangGraph Documentation](https://langchain-ai.github.io/langgraph/)
 - [Anthropic Token Counting](https://docs.anthropic.com/claude/docs/models-overview)
 
 ---
-
-**Créé avec ❤️ pour optimiser vos agents LLM**
