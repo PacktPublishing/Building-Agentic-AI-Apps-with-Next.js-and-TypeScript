@@ -9,11 +9,12 @@ import { useAuth } from "@/components/auth/auth-provider"
 import { Button } from "@/app/components/ui/button"
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard" as const },
-  { name: "Trips", href: "/dashboard/trips" as const },
-  { name: "Settings", href: "/dashboard/settings" as const },
-  { name: "Profile", href: "/dashboard/profile" as const },
-] as const
+  { name: "Dashboard", href: "/dashboard" },
+  { name: "AI Assistant", href: "/dashboard/ai-chat" },
+  { name: "Trips", href: "/dashboard/trips" },
+  { name: "Settings", href: "/dashboard/settings" },
+  { name: "Profile", href: "/dashboard/profile" },
+]
 
 export function Sidebar() {
   const pathname = usePathname()

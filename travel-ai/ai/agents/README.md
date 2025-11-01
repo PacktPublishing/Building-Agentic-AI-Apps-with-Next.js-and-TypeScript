@@ -44,7 +44,7 @@ The agent can connect to multiple MCP servers for different tools:
 
 ```typescript
 {
-  weather: {
+  amadeus: {
     transport: "http",
     url: config.amadeus_url,
     headers: {
