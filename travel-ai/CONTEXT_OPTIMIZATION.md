@@ -31,19 +31,19 @@ This optimization system reduces token consumption by **60-70%** by using the LL
 ```
 ai/
 ├── context/
-│   ├── context-manager.ts    # Gestionnaire de contexte
-│   └── README.md             # Documentation détaillée
+│   ├── context-manager.ts    # Context manager
+│   └── README.md             # Detailed documentation
 ├── prompts/
-│   └── system-prompt.ts      # Prompts optimisés
+│   └── system-prompt.ts      # Optimized prompts
 └── agents/
-    └── agent.ts              # Agent avec optimisations
+    └── agent.ts              # Agent with optimizations
 ```
 
-## 🔧 Fonctionnalités
+## 🔧 Features
 
-### 1. Extraction de métadonnées par LLM
+### 1. LLM Metadata Extraction
 
-Le LLM analyse la conversation et extrait automatiquement :
+The LLM analyzes the conversation and automatically extracts:
 
 ```typescript
 {
@@ -62,11 +62,11 @@ Le LLM analyse la conversation et extrait automatiquement :
 }
 ```
 
-**Déclenchement** : Tous les 3 messages ou à la première requête
+**Trigger**: Every 3 messages or on first request
 
-### 2. Résumés intelligents par LLM
+### 2. Intelligent LLM Summaries
 
-Le LLM crée des résumés concis (2-3 phrases) :
+The LLM creates concise summaries (2-3 sentences):
 
 ```
 "User planning romantic week in Barcelona for 2, seeking flights 
@@ -74,17 +74,17 @@ from Paris, hotels, and activities. Mid-range budget preferred.
 Currently reviewing hotel options in city center."
 ```
 
-**Déclenchement** : Après 6 messages
+**Trigger**: After 6 messages
 
-### 3. Fenêtre glissante d'historique
+### 3. Sliding History Window
 
-- Garde les **10 derniers messages**
-- Conserve toujours le **premier message** (contexte initial)
-- Supprime automatiquement les messages intermédiaires
+- Keeps the **last 10 messages**
+- Always preserves the **first message** (initial context)
+- Automatically removes intermediate messages
 
-### 4. Prompt dynamique
+### 4. Dynamic Prompt
 
-Le system prompt s'enrichit automatiquement :
+The system prompt is automatically enriched:
 
 ```
 [Base Prompt]
