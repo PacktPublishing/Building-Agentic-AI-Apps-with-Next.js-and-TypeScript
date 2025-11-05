@@ -136,7 +136,7 @@ Return JSON only, no explanation:`;
 
         const conversationText = messages
             .map(m => {
-                const role = m._getType?.() === 'human' ? 'User' : 'Assistant';
+                const role = m.type === 'human' ? 'User' : 'Assistant';
                 const content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
                 return `${role}: ${content}`;
             })
