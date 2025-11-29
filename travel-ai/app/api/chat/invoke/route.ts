@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
-import { MyFirstAgent } from '../../../../ai/agents/agent';
+import { TravelAssistantAgent } from '../../../../ai/agents/agent';
 import { ChatRequest, ChatResponse } from '../types';
 
 /**
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
         const finalThreadId = threadId || uuidv4();
 
         // Initialize the agent
-        const agent = MyFirstAgent.getInstance();
+        const agent = TravelAssistantAgent.getInstance();
         await agent.initialize();
 
         // Invoke the agent and wait for complete response

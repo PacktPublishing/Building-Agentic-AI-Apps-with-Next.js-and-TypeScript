@@ -52,7 +52,7 @@ type ToolCall = z.infer<typeof ToolCallSchema>;
 type BaseMessage = z.infer<typeof BaseMessageSchema>;
 type ToolResult = z.infer<typeof ToolResultSchema>;
 
-class MyFirstAgent {
+class TravelAssistantAgent {
     private model: ChatAnthropic;
     private tools: DynamicStructuredTool[];
     private memory: MemorySaver;
@@ -62,7 +62,7 @@ class MyFirstAgent {
     private contextManager: ContextManager;
 
     // Singleton
-    private static instance: MyFirstAgent;
+    private static instance: TravelAssistantAgent;
 
     private constructor() {
         this.model = new ChatAnthropic({
@@ -84,11 +84,11 @@ class MyFirstAgent {
         });
     }
 
-    static getInstance(): MyFirstAgent {
-        if (!MyFirstAgent.instance) {
-            MyFirstAgent.instance = new MyFirstAgent();
+    static getInstance(): TravelAssistantAgent {
+        if (!TravelAssistantAgent.instance) {
+            TravelAssistantAgent.instance = new TravelAssistantAgent();
         }
-        return MyFirstAgent.instance;
+        return TravelAssistantAgent.instance;
     }
 
     /**
@@ -835,6 +835,6 @@ class MyFirstAgent {
     }
 }
 
-const agent = MyFirstAgent.getInstance();
+const agent = TravelAssistantAgent.getInstance();
 export default agent;
-export { MyFirstAgent };
+export { TravelAssistantAgent };

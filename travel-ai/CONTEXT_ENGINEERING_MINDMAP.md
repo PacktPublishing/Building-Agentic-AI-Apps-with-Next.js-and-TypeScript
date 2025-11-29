@@ -17,7 +17,7 @@ mindmap
           Token Estimation
           Usage Tracking
       Agent Integration
-        MyFirstAgent
+        TravelAssistantAgent
           Singleton Pattern
           Auto-initialization
         prepareContext
@@ -206,7 +206,7 @@ graph LR
     
     subgraph Backend API
         C --> G[Route Handler]
-        G --> H[MyFirstAgent.getInstance]
+        G --> H[TravelAssistantAgent.getInstance]
         H --> I[streamStructured]
         
         J[Stats Route] --> K[getContextStats]

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { MyFirstAgent } from '../../../../ai/agents/agent';
+import { TravelAssistantAgent } from '../../../../ai/agents/agent';
 
 /**
  * GET /api/chat/stats?threadId=xxx
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        const agent = MyFirstAgent.getInstance();
+        const agent = TravelAssistantAgent.getInstance();
         await agent.initialize();
 
         const stats = await agent.getContextStats(threadId);

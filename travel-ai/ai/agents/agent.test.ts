@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, vi } from "vitest";
-import agent, { MyFirstAgent } from "./agent";
+import agent, { TravelAssistantAgent } from "./agent";
 
 /**
  * Tests for ReAct Agent with Human-in-the-Loop
@@ -11,7 +11,7 @@ import agent, { MyFirstAgent } from "./agent";
  * 4. Conversational memory management
  * 5. Response streaming
  */
-describe("MyFirstAgent - ReAct Agent with HITL", () => {
+describe("TravelAssistantAgent - ReAct Agent with HITL", () => {
     // Enable verbose logging for educational purposes
     const VERBOSE = true;
     
@@ -270,7 +270,7 @@ describe("MyFirstAgent - ReAct Agent with HITL", () => {
     describe("Error Handling", () => {
         it("should throw error if agent is not initialized", async () => {
             // Create a new uninitialized instance (for testing)
-            const uninitializedAgent = MyFirstAgent.getInstance();
+            const uninitializedAgent = TravelAssistantAgent.getInstance();
             
             // Note: Since it's a singleton, it will already be initialized
             // This test is more conceptual to show the protection

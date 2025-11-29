@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
-import { MyFirstAgent } from '../../../../ai/agents/agent';
+import { TravelAssistantAgent } from '../../../../ai/agents/agent';
 import { ChatRequest, SSEEvent } from '../types';
 
 /**
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
                 try {
                     // Initialize the agent
-                    const agent = MyFirstAgent.getInstance();
+                    const agent = TravelAssistantAgent.getInstance();
                     await agent.initialize();
 
                     sendEvent({ type: 'start', data: { threadId: finalThreadId } });

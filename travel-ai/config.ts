@@ -12,6 +12,8 @@ class Config {
     have_amadeus_bearer_token: boolean = false;
     amadeus_url: string = "";
     have_amadeus_url: boolean = false;
+    supabase_access_token: string = "";
+    have_supabase_access_token: boolean = false;
     is_interrupt: boolean = false;
     have_is_interrupt: boolean = false;
 
@@ -38,6 +40,8 @@ class Config {
         this.amadeus_bearer_token = this.populate("AMADEUS_BEARER_TOKEN");
         this.have_amadeus_url = this.apiKeyExists("AMADEUS_URL");
         this.amadeus_url = this.populate("AMADEUS_URL");
+        this.have_supabase_access_token = this.apiKeyExists("SUPABASE_ACCESS_TOKEN");
+        this.supabase_access_token = this.populate("SUPABASE_ACCESS_TOKEN");
         this.have_is_interrupt = this.apiKeyExists("IS_INTERRUPT");
         this.is_interrupt = this.populate("IS_INTERRUPT") === "false";
     }
