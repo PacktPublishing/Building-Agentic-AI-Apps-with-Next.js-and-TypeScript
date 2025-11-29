@@ -4,13 +4,13 @@ import { ChatRequest, SSEEvent } from './types';
 const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3000';
 
 describe('Chat API', () => {
-    describe('POST /api/chat/start', () => {
+    describe('POST /api/chat/stream-structured', () => {
         it('should start a new chat and stream response', async () => {
             const request: ChatRequest = {
                 message: 'Hello! I want to plan a trip to Paris'
             };
 
-            const response = await fetch(`${BASE_URL}/api/chat/start`, {
+            const response = await fetch(`${BASE_URL}/api/chat/stream-structured`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -71,7 +71,7 @@ describe('Chat API', () => {
                 message: 'Hello!'
             };
 
-            const response1 = await fetch(`${BASE_URL}/api/chat/start`, {
+            const response1 = await fetch(`${BASE_URL}/api/chat/stream-structured`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(request1),
@@ -112,7 +112,7 @@ describe('Chat API', () => {
                 threadId: threadId!
             };
 
-            const response2 = await fetch(`${BASE_URL}/api/chat/start`, {
+            const response2 = await fetch(`${BASE_URL}/api/chat/stream-structured`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(request2),
@@ -123,7 +123,7 @@ describe('Chat API', () => {
         }, 30000);
 
         it('should return 400 for missing message', async () => {
-            const response = await fetch(`${BASE_URL}/api/chat/start`, {
+            const response = await fetch(`${BASE_URL}/api/chat/stream-structured`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({}),
@@ -139,7 +139,7 @@ describe('Chat API', () => {
                 message: 'Search for good activities in Paris'
             };
 
-            const response = await fetch(`${BASE_URL}/api/chat/start`, {
+            const response = await fetch(`${BASE_URL}/api/chat/stream-structured`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(request),
