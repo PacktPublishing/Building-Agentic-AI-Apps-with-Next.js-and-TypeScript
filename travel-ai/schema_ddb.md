@@ -1,4 +1,6 @@
+```mermaid
 erDiagram
+
     USERS {
         uuid id PK
         text email
@@ -68,3 +70,4 @@ erDiagram
         text content
         jsonb metadata
     }
+```

@@ -122,5 +122,6 @@ export function useStreamChat() {
         error,
         sendMessage,
         clearMessages,
+        threadId,
     };
 }

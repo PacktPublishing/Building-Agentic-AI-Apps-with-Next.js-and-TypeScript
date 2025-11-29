@@ -5,6 +5,8 @@ import { MultiServerMCPClient } from "@langchain/mcp-adapters";
 import { DynamicStructuredTool } from "@langchain/core/tools";
 import { config } from "../../config";
 import { z } from "zod";
+import { ContextManager } from "../context/context-manager";
+import {  TRAVEL_ASSISTANT_PROMPT } from "../prompts/system-prompt";
 
 // Zod schemas for runtime validation
 const MessageContentSchema = z.object({
@@ -12,13 +14,13 @@ const MessageContentSchema = z.object({
     text: z.string().optional(),
     id: z.string().optional(),
     name: z.string().optional(),
-    input: z.union([z.string(), z.record(z.any())]).optional(),
+    input: z.union([z.string(), z.record(z.unknown())]).optional(),
 });
 
 const ToolCallSchema = z.object({
     id: z.string(),
     name: z.string(),
-    args: z.record(z.any()),
+    args: z.record(z.unknown()),
 });
 
 const BaseMessageSchema = z.object({
@@ -27,7 +29,7 @@ const BaseMessageSchema = z.object({
     content: z.union([
         z.string(),
         z.array(MessageContentSchema),
-        z.record(z.any())
+        z.record(z.unknown())
     ]),
     tool_calls: z.array(ToolCallSchema).optional(),
     name: z.string().optional(),
@@ -37,7 +39,7 @@ const BaseMessageSchema = z.object({
 
 const ToolResultSchema = z.object({
     success: z.boolean(),
-    data: z.array(z.any()).optional(),
+    data: z.array(z.unknown()).optional(),
     meta: z.object({
         totalAvailable: z.number().optional(),
     }).optional(),
@@ -57,6 +59,7 @@ class MyFirstAgent {
     private graph: any;
     private mcpClient: MultiServerMCPClient | null = null;
     private isInitialized: boolean = false;
+    private contextManager: ContextManager;
 
     // Singleton
     private static instance: MyFirstAgent;
@@ -67,11 +70,18 @@ class MyFirstAgent {
             model: config.model_name || "claude-3-7-sonnet-20250219",
             streaming: true,
             temperature: 0.5,
+            tags: ["travel-agent", "context-engineering", "optimized"],
         });
         
         this.tools = [];
         this.memory = new MemorySaver();
         this.graph = null;
+        this.contextManager = new ContextManager(this.model, {
+            maxHistoryMessages: 10,
+            enableSummarization: true,
+            summaryTriggerThreshold: 6,
+            enableMetadataExtraction: true,
+        });
     }
 
     static getInstance(): MyFirstAgent {
@@ -129,17 +139,12 @@ class MyFirstAgent {
         
         this.tools = [...mcpTools, getCurrentDateTool]; 
 
-        // Create the ReAct agent with loaded tools and custom prompt
-        const systemPrompt = `You are a helpful travel planning assistant. You have access to various tools to help users plan their trips.
-
-Use the tools available to search for flights, hotels, activities, and other travel information.
-Always provide detailed and helpful responses based on the tool results.`;
-
+        // Create the ReAct agent with optimized prompt
         this.graph = createAgent({
             model: this.model,
             tools: this.tools,
             checkpointer: this.memory,
-            systemPrompt: systemPrompt
+            systemPrompt: TRAVEL_ASSISTANT_PROMPT
         });
 
         this.isInitialized = true;
@@ -155,9 +160,47 @@ Always provide detailed and helpful responses based on the tool results.`;
         }
     }
 
+    /**
+     * Prepare context for conversation
+     */
+    private async prepareContext(threadId: string): Promise<void> {
+        const state = await this.graph.getState({ configurable: { thread_id: threadId } });
+        const messages = state.values?.messages || [];
+
+        if (messages.length === 0) return;
+
+        // Extract metadata every 3 messages
+        if (this.contextManager.getMetadata(threadId) === undefined || messages.length % 3 === 0) {
+            console.log('[Agent] Extracting user metadata...');
+            await this.contextManager.extractMetadata(messages, threadId);
+        }
+
+        // Summarize if threshold reached
+        if (this.contextManager.shouldSummarize(messages.length)) {
+            console.log('[Agent] Creating conversation summary...');
+            await this.contextManager.summarizeHistory(messages, threadId);
+        }
+
+        // Log token usage
+        const tokenCount = this.contextManager.calculateMessageTokens(messages);
+        console.log(`[Agent] Current conversation: ${messages.length} messages, ~${tokenCount} tokens`);
+    }
+
     async invoke(message: string, threadId: string = "default") {
         this.ensureInitialized();
-        const config = { configurable: { thread_id: threadId } };
+        
+        // Prepare context before invoking
+        await this.prepareContext(threadId);
+        
+        const config = { 
+            configurable: { thread_id: threadId },
+            tags: ["travel-agent", "context-engineering", "optimized", `thread:${threadId}`],
+            metadata: {
+                optimization: "enabled",
+                thread_id: threadId,
+                agent_type: "travel"
+            }
+        };
         
         // First invocation with the user message
         let result = await this.graph.invoke(
@@ -333,7 +376,20 @@ Always provide detailed and helpful responses based on the tool results.`;
      */
     async *streamStructured(message: string, threadId: string = "default") {
         this.ensureInitialized();
-        const config = { configurable: { thread_id: threadId } };
+        
+        // Prepare context before streaming
+        await this.prepareContext(threadId);
+        
+        const config = { 
+            configurable: { thread_id: threadId },
+            tags: ["travel-agent", "context-engineering", "optimized", `thread:${threadId}`, "streaming"],
+            metadata: {
+                optimization: "enabled",
+                thread_id: threadId,
+                agent_type: "travel",
+                stream_mode: "structured"
+            }
+        };
         const stream = await this.graph.stream(
             { messages: [{ role: "user", content: message }] },
             config,
@@ -752,6 +808,30 @@ Always provide detailed and helpful responses based on the tool results.`;
 
     getTools() {
         return this.tools;
+    }
+
+    /**
+     * Get context statistics for a thread
+     */
+    async getContextStats(threadId: string = "default") {
+        const state = await this.graph.getState({ configurable: { thread_id: threadId } });
+        const messages = state.values?.messages || [];
+        
+        return {
+            messageCount: messages.length,
+            estimatedTokens: this.contextManager.calculateMessageTokens(messages),
+            hasSummary: !!this.contextManager.getSummary(threadId),
+            hasMetadata: !!this.contextManager.getMetadata(threadId),
+            summary: this.contextManager.getSummary(threadId),
+            metadata: this.contextManager.getMetadata(threadId),
+        };
+    }
+
+    /**
+     * Get the context manager instance
+     */
+    getContextManager() {
+        return this.contextManager;
     }
 }
 
