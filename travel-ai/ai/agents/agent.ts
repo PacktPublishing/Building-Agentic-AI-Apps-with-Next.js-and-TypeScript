@@ -6,7 +6,7 @@ import { DynamicStructuredTool } from "@langchain/core/tools";
 import { config } from "../../config";
 import { z } from "zod";
 import { ContextManager } from "../context/context-manager";
-import { generateContextualPrompt, TRAVEL_ASSISTANT_PROMPT } from "../prompts/system-prompt";
+import {  TRAVEL_ASSISTANT_PROMPT } from "../prompts/system-prompt";
 
 // Zod schemas for runtime validation
 const MessageContentSchema = z.object({

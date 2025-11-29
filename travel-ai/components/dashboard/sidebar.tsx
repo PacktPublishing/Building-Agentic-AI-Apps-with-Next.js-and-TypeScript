@@ -6,7 +6,7 @@ import { LogOut, User } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useAuth } from "@/components/auth/auth-provider"
-import { Button } from "@/app/components/ui/button"
+import { Button } from "@/components/ui/button"
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard" },
@@ -21,7 +21,7 @@ export function Sidebar() {
   const { user, signOut } = useAuth()
 
   return (
-    <div className="w-64 bg-secondary border-r border-border">
+    <div className="relative w-64 bg-secondary border-r border-border flex flex-col h-full">
       <div className="p-6">
         <div className="flex items-center justify-between">
           <Link href="/" className="text-xl font-bold text-foreground">
@@ -31,7 +31,7 @@ export function Sidebar() {
         </div>
       </div>
 
-      <nav className="px-4 space-y-2">
+      <nav className="px-4 space-y-2 flex-1">
         {navigation.map((item) => (
           <Link
             key={item.name}
@@ -48,7 +48,7 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="absolute bottom-4 left-4 right-4 space-y-3">
+      <div className="p-4 space-y-3">
         {/* Informations utilisateur */}
         {user && (
           <div className="flex items-center space-x-3 p-3 bg-muted rounded-md">

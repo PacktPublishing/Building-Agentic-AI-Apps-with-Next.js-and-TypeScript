@@ -1,3 +1,4 @@
+
 /**
  * Strict types for tool results to avoid 'any'
  */
