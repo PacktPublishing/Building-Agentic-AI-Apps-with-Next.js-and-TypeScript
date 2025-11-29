@@ -67,7 +67,7 @@ class MyFirstAgent {
     private constructor() {
         this.model = new ChatAnthropic({
             apiKey: config.anthropic_api_key,
-            model: config.model_name || "claude-3-7-sonnet-20250219",
+            model: config.model_name || "claude-sonnet-4-5",
             streaming: true,
             temperature: 0.5,
             tags: ["travel-agent", "context-engineering", "optimized"],
