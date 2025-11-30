@@ -7,7 +7,7 @@ class Config {
     anthropic_api_key: string = "";
     have_anthropic_api_key: boolean = false;
     have_model: boolean = false;
-    model_name: string = "claude-sonnet-4-5";
+    model_name: string = "claude-sonnet-4-5-20250929";
     amadeus_bearer_token: string = "";
     have_amadeus_bearer_token: boolean = false;
     amadeus_url: string = "";
@@ -35,7 +35,7 @@ class Config {
         this.have_model = this.apiKeyExists("MODEL_NAME");
         this.openai_api_key = this.populate("OPENAI_API_KEY");
         this.anthropic_api_key = this.populate("ANTHROPIC_API_KEY");
-        this.model_name = this.populate("MODEL_NAME") || "claude-sonnet-4-5";
+        this.model_name = this.populate("MODEL_NAME") || "claude-sonnet-4-5-20250929";
         this.have_amadeus_bearer_token = this.apiKeyExists("AMADEUS_BEARER_TOKEN");
         this.amadeus_bearer_token = this.populate("AMADEUS_BEARER_TOKEN");
         this.have_amadeus_url = this.apiKeyExists("AMADEUS_URL");

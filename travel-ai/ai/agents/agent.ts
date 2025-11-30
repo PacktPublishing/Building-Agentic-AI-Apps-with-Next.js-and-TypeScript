@@ -1,12 +1,14 @@
 import { ChatAnthropic } from "@langchain/anthropic";
 import { MemorySaver } from "@langchain/langgraph";
 import { createAgent } from "langchain";
-import { MultiServerMCPClient } from "@langchain/mcp-adapters"; 
 import { DynamicStructuredTool } from "@langchain/core/tools";
 import { config } from "../../config";
 import { z } from "zod";
 import { ContextManager } from "../context/context-manager";
-import {  TRAVEL_ASSISTANT_PROMPT } from "../prompts/system-prompt";
+import { TRAVEL_ASSISTANT_PROMPT } from "../prompts/system-prompt";
+
+// Tools (externalized for reusability)
+import { getAllTools, closeMcpClient } from "../tools";
 
 // Zod schemas for runtime validation
 const MessageContentSchema = z.object({
@@ -57,7 +59,6 @@ class TravelAssistantAgent {
     private tools: DynamicStructuredTool[];
     private memory: MemorySaver;
     private graph: any;
-    private mcpClient: MultiServerMCPClient | null = null;
     private isInitialized: boolean = false;
     private contextManager: ContextManager;
 
@@ -67,7 +68,7 @@ class TravelAssistantAgent {
     private constructor() {
         this.model = new ChatAnthropic({
             apiKey: config.anthropic_api_key,
-            model: config.model_name || "claude-sonnet-4-5",
+            model:  config.model_name,
             streaming: true,
             temperature: 0.5,
             tags: ["travel-agent", "context-engineering", "optimized"],
@@ -92,7 +93,7 @@ class TravelAssistantAgent {
     }
 
     /**
-     * Initialize the MCP client and load tools
+     * Initialize the agent and load tools
      * Must be called before using the agent
      */
     async initialize(): Promise<void> {
@@ -101,43 +102,8 @@ class TravelAssistantAgent {
             return;
         }
 
-
-        this.mcpClient = new MultiServerMCPClient({  
-            amadeus: {
-                transport: "http",
-                url: config.amadeus_url,
-                headers: {
-                    "Authorization": `Bearer ${config.amadeus_bearer_token}`
-                }
-            },
-        });
-
-
-        const mcpTools = await this.mcpClient.getTools();
-        
-        // Outil pour obtenir la date actuelle
-        const getCurrentDateTool = new DynamicStructuredTool({
-            name: "get_current_date",
-            description: "Returns the current date with day, month, and year. Use this tool when you need to know today's date.",
-            schema: z.object({}),
-            func: async () => {
-                const now = new Date();
-                return JSON.stringify({
-                    day: now.getDate(),
-                    month: now.getMonth() + 1,
-                    year: now.getFullYear(),
-                    formatted: now.toLocaleDateString('en-US', { 
-                        weekday: 'long', 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                    }),
-                    iso: now.toISOString()
-                });
-            }
-        });
-        
-        this.tools = [...mcpTools, getCurrentDateTool]; 
+        // Load all tools (MCP + custom) from externalized module
+        this.tools = await getAllTools();
 
         // Create the ReAct agent with optimized prompt
         this.graph = createAgent({
@@ -708,22 +674,27 @@ class TravelAssistantAgent {
             console.warn('[transformFlightsData] Invalid data received:', data);
             return [];
         }
-        return data.slice(0, 3).map((offer: any) => ({
-            id: offer.id,
-            price: {
-                amount: parseFloat(offer.price?.total || offer.price?.grandTotal || '0'),
-                currency: offer.price?.currency || 'EUR'
-            },
-            outbound: this.transformItinerary(offer.itineraries[0], offer.validatingAirlineCodes),
-            inbound: this.transformItinerary(offer.itineraries[1], offer.validatingAirlineCodes)
-        }));
+        return data
+            .filter((offer: any) => offer?.itineraries && Array.isArray(offer.itineraries) && offer.itineraries.length > 0)
+            .slice(0, 3)
+            .map((offer: any) => ({
+                id: offer.id,
+                price: {
+                    amount: parseFloat(offer.price?.total || offer.price?.grandTotal || '0'),
+                    currency: offer.price?.currency || 'EUR'
+                },
+                outbound: this.transformItinerary(offer.itineraries[0], offer.validatingAirlineCodes),
+                inbound: this.transformItinerary(offer.itineraries?.[1], offer.validatingAirlineCodes)
+            }));
     }
 
     /**
      * Transform flight itinerary
      */
     private transformItinerary(itinerary: any, validatingCodes: string[]): any {
-        if (!itinerary) return {};
+        if (!itinerary || !itinerary.segments || !Array.isArray(itinerary.segments) || itinerary.segments.length === 0) {
+            return {};
+        }
         
         const firstSegment = itinerary.segments[0];
         const lastSegment = itinerary.segments[itinerary.segments.length - 1];

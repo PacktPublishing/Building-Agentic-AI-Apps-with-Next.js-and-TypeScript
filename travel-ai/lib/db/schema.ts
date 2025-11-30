@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, numeric, jsonb, date } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, numeric, jsonb, date, integer } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -15,6 +15,18 @@ export const trips = pgTable("trips", {
   startDate: date("start_date"),
   endDate: date("end_date"),
   budget: numeric("budget"),
+  // Trip planner fields
+  numPeople: integer("num_people"),
+  departureCity: text("departure_city"),
+  arrivalCity: text("arrival_city"),
+  departureDate: date("departure_date"),
+  stayDuration: integer("stay_duration"),
+  flights: jsonb("flights"),
+  hotels: jsonb("hotels"),
+  activities: jsonb("activities"),
+  status: text("status").default("draft"),
+  threadId: text("thread_id"),
+  updatedAt: timestamp("updated_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

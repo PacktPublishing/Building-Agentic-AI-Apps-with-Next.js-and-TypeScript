@@ -1,6 +1,7 @@
 import { BaseMessage } from "@langchain/core/messages";
 import { ChatAnthropic } from "@langchain/anthropic";
 
+
 /**
  * Configuration for context management
  */
@@ -15,9 +16,9 @@ export interface ContextConfig {
  * Default context configuration
  */
 export const DEFAULT_CONTEXT_CONFIG: ContextConfig = {
-    maxHistoryMessages: 10,
+    maxHistoryMessages: 1,
     enableSummarization: true,
-    summaryTriggerThreshold: 6,
+    summaryTriggerThreshold: 1,
     enableMetadataExtraction: true,
 };
 
