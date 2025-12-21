@@ -1,123 +1,123 @@
 # RAG Implementation Guide - From Zero to Semantic Search
 
-> **Objectif** : Ce guide forme les développeurs aux concepts et à l'implémentation d'un système RAG (Retrieval-Augmented Generation) complet.
+> **Objective**: This guide teaches developers the concepts and implementation of a complete RAG (Retrieval-Augmented Generation) system.
 
 ---
 
-## Table des matières
+## Table of Contents
 
-1. [Qu'est-ce que le RAG ?](#1-quest-ce-que-le-rag-)
-2. [Les Embeddings - Le cœur du système](#2-les-embeddings---le-cœur-du-système)
-3. [L'Ingestion - Stocker les données vectorielles](#3-lingestion---stocker-les-données-vectorielles)
-4. [Le Retrieval - Recherche sémantique](#4-le-retrieval---recherche-sémantique)
-5. [L'Agent - Utiliser le RAG dans un LLM](#5-lagent---utiliser-le-rag-dans-un-llm)
-6. [Implémentation complète](#6-implémentation-complète)
+1. [What is RAG?](#1-what-is-rag)
+2. [Embeddings - The Heart of the System](#2-embeddings---the-heart-of-the-system)
+3. [Ingestion - Storing Vector Data](#3-ingestion---storing-vector-data)
+4. [Retrieval - Semantic Search](#4-retrieval---semantic-search)
+5. [The Agent - Using RAG in an LLM](#5-the-agent---using-rag-in-an-llm)
+6. [Complete Implementation](#6-complete-implementation)
 
 ---
 
-## 1. Qu'est-ce que le RAG ?
+## 1. What is RAG?
 
-### Le problème des LLMs
+### The Problem with LLMs
 
-Les LLMs (GPT-4, Claude, etc.) ont une **limite fondamentale** : ils ne connaissent que ce sur quoi ils ont été entraînés. Ils ne peuvent pas :
+LLMs (GPT-4, Claude, etc.) have a **fundamental limitation**: they only know what they were trained on. They cannot:
 
-- Accéder à vos données privées (trips des utilisateurs)
-- Connaître les informations récentes
-- Répondre sur des domaines spécifiques non couverts
+- Access your private data (user trips)
+- Know recent information
+- Answer questions about specific domains not covered in training
 
-### La solution : RAG
+### The Solution: RAG
 
 **RAG = Retrieval-Augmented Generation**
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                              │
-│   Question utilisateur : "Montre-moi des voyages similaires à Lisbonne"    │
+│   User question: "Show me trips similar to Lisbon"                          │
 │                                                                              │
 │                                    │                                         │
 │                                    ▼                                         │
 │   ┌─────────────────────────────────────────────────────────────────────┐   │
-│   │  RETRIEVAL : Chercher dans la base de données vectorielle           │   │
+│   │  RETRIEVAL: Search in the vector database                           │   │
 │   │                                                                      │   │
-│   │  "Lisbonne" → [0.12, -0.34, 0.56, ...] → Recherche similarité       │   │
-│   │                                          → Top 5 trips trouvés       │   │
+│   │  "Lisbon" → [0.12, -0.34, 0.56, ...] → Similarity search            │   │
+│   │                                        → Top 5 trips found           │   │
 │   └─────────────────────────────────────────────────────────────────────┘   │
 │                                    │                                         │
 │                                    ▼                                         │
 │   ┌─────────────────────────────────────────────────────────────────────┐   │
-│   │  AUGMENTATION : Enrichir le prompt avec le contexte récupéré        │   │
+│   │  AUGMENTATION: Enrich the prompt with retrieved context             │   │
 │   │                                                                      │   │
-│   │  "Voici les trips similaires trouvés :                               │   │
-│   │   - Trip to Barcelona, 7 jours, $2500                                │   │
-│   │   - Trip to Porto, 5 jours, $1800                                    │   │
-│   │   Réponds à l'utilisateur en te basant sur ces données."            │   │
+│   │  "Here are the similar trips found:                                  │   │
+│   │   - Trip to Barcelona, 7 days, $2500                                │   │
+│   │   - Trip to Porto, 5 days, $1800                                    │   │
+│   │   Answer the user based on this data."                              │   │
 │   └─────────────────────────────────────────────────────────────────────┘   │
 │                                    │                                         │
 │                                    ▼                                         │
 │   ┌─────────────────────────────────────────────────────────────────────┐   │
-│   │  GENERATION : Le LLM génère une réponse contextualisée              │   │
+│   │  GENERATION: The LLM generates a contextualized response            │   │
 │   │                                                                      │   │
-│   │  "Basé sur votre voyage à Lisbonne, je vous recommande :             │   │
-│   │   1. Barcelona - ambiance similaire, plages, architecture...        │   │
-│   │   2. Porto - même pays, culture proche, budget similaire..."        │   │
+│   │  "Based on your trip to Lisbon, I recommend:                         │   │
+│   │   1. Barcelona - similar vibe, beaches, architecture...             │   │
+│   │   2. Porto - same country, similar culture, similar budget..."      │   │
 │   └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Pourquoi pas une simple recherche SQL ?
+### Why Not a Simple SQL Search?
 
 ```sql
--- ❌ Recherche traditionnelle : keyword-based
+-- ❌ Traditional search: keyword-based
 SELECT * FROM trips WHERE destination LIKE '%beach%';
--- Ne trouve RIEN si l'utilisateur cherche "vacances à la plage"
--- Ne comprend pas que "Lisbonne" et "Porto" sont similaires
+-- Finds NOTHING if the user searches for "seaside vacation"
+-- Doesn't understand that "Lisbon" and "Porto" are similar
 ```
 
 ```
--- ✅ Recherche sémantique : meaning-based
+-- ✅ Semantic search: meaning-based
 Query: "romantic getaway Mediterranean"
-Trouve: Santorini, Amalfi Coast, Barcelona
-→ Même si aucun ne contient les mots "romantic" ou "Mediterranean"
+Finds: Santorini, Amalfi Coast, Barcelona
+→ Even if none contain the words "romantic" or "Mediterranean"
 ```
 
 ---
 
-## 2. Les Embeddings - Le cœur du système
+## 2. Embeddings - The Heart of the System
 
-### Qu'est-ce qu'un embedding ?
+### What is an Embedding?
 
-Un **embedding** est une représentation numérique du **sens** d'un texte. C'est un vecteur de nombres (généralement 1536 dimensions pour OpenAI).
+An **embedding** is a numerical representation of the **meaning** of a text. It's a vector of numbers (typically 1536 dimensions for OpenAI).
 
 ```
-Texte: "7-day trip to Lisbon from Paris for 2 people. Beach, culture, food."
+Text: "7-day trip to Lisbon from Paris for 2 people. Beach, culture, food."
          │
          ▼
-Embedding: [0.0234, -0.0891, 0.0456, 0.1234, -0.0567, ... ] (1536 nombres)
+Embedding: [0.0234, -0.0891, 0.0456, 0.1234, -0.0567, ... ] (1536 numbers)
 ```
 
-### Pourquoi ça fonctionne ?
+### Why Does It Work?
 
-Les embeddings capturent le **sens sémantique**. Des textes similaires ont des vecteurs proches :
+Embeddings capture **semantic meaning**. Similar texts have close vectors:
 
 ```
 "Trip to Lisbon, beach vacation"     → [0.12, -0.34, 0.56, ...]
-"Voyage à Lisbonne, plage"           → [0.11, -0.33, 0.55, ...]  ← TRÈS PROCHE !
-"Business trip to Tokyo"             → [-0.45, 0.23, -0.12, ...] ← TRÈS DIFFÉRENT
+"Voyage à Lisbonne, plage"           → [0.11, -0.33, 0.55, ...]  ← VERY CLOSE!
+"Business trip to Tokyo"             → [-0.45, 0.23, -0.12, ...] ← VERY DIFFERENT
 ```
 
-### Comment mesurer la similarité ?
+### How to Measure Similarity?
 
-On utilise la **similarité cosinus** (angle entre deux vecteurs) :
+We use **cosine similarity** (angle between two vectors):
 
 ```
-Similarité = 1.0  → Identiques
-Similarité = 0.9  → Très similaires
-Similarité = 0.5  → Peu de rapport
-Similarité = 0.0  → Aucun rapport
+Similarity = 1.0  → Identical
+Similarity = 0.9  → Very similar
+Similarity = 0.5  → Little relation
+Similarity = 0.0  → No relation
 ```
 
-### Implémentation : Service d'embeddings
+### Implementation: Embeddings Service
 
 ```typescript
 // lib/infrastructure/embeddings/openai-service.ts
@@ -134,10 +134,10 @@ export class OpenAIEmbeddingsService implements IEmbeddingsService {
   }
 
   /**
-   * Génère un embedding pour un texte donné
+   * Generates an embedding for a given text
    * 
-   * @param text - Le texte à convertir en vecteur
-   * @returns Un tableau de 1536 nombres représentant le sens du texte
+   * @param text - The text to convert to a vector
+   * @returns An array of 1536 numbers representing the meaning of the text
    */
   async generate(text: string): Promise<number[]> {
     const response = await this.client.embeddings.create({
@@ -146,39 +146,39 @@ export class OpenAIEmbeddingsService implements IEmbeddingsService {
     });
 
     return response.data[0].embedding;
-    // Retourne: [0.0234, -0.0891, 0.0456, ...] (1536 nombres)
+    // Returns: [0.0234, -0.0891, 0.0456, ...] (1536 numbers)
   }
 }
 ```
 
-### Points clés sur les embeddings
+### Key Points About Embeddings
 
-| Aspect | Détail |
+| Aspect | Detail |
 |--------|--------|
-| **Modèle** | `text-embedding-3-small` (OpenAI) - bon rapport qualité/prix |
-| **Dimensions** | 1536 nombres par vecteur |
-| **Coût** | ~$0.02 pour 1M tokens |
-| **Latence** | ~100-200ms par requête |
-| **Langue** | Multilingue (FR, EN, ES, etc. dans le même espace) |
+| **Model** | `text-embedding-3-small` (OpenAI) - good quality/price ratio |
+| **Dimensions** | 1536 numbers per vector |
+| **Cost** | ~$0.02 per 1M tokens |
+| **Latency** | ~100-200ms per request |
+| **Language** | Multilingual (FR, EN, ES, etc. in the same space) |
 
 ---
 
-## 3. L'Ingestion - Stocker les données vectorielles
+## 3. Ingestion - Storing Vector Data
 
-### Le flux d'ingestion
+### The Ingestion Flow
 
-Quand un utilisateur **sauvegarde un trip**, on doit :
+When a user **saves a trip**, we need to:
 
-1. Sauvegarder les données structurées (PostgreSQL)
-2. Générer un résumé textuel du trip
-3. Convertir ce résumé en embedding
-4. Stocker l'embedding + métadonnées dans Qdrant
+1. Save structured data (PostgreSQL)
+2. Generate a text summary of the trip
+3. Convert this summary to an embedding
+4. Store the embedding + metadata in Qdrant
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         FLUX D'INGESTION                                     │
+│                         INGESTION FLOW                                       │
 │                                                                              │
-│  Trip confirmé                                                               │
+│  Trip confirmed                                                              │
 │       │                                                                      │
 │       ▼                                                                      │
 │  ┌─────────────┐     ┌─────────────────────────────────────────────────┐   │
@@ -198,16 +198,16 @@ Quand un utilisateur **sauvegarde un trip**, on doit :
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Pourquoi un dual storage ?
+### Why Dual Storage?
 
 | PostgreSQL | Qdrant |
 |------------|--------|
-| Données structurées | Recherche sémantique |
-| Relations (user → trips) | Similarité vectorielle |
-| Transactions ACID | Recherche approximative rapide (ANN) |
-| Requêtes exactes | Requêtes "floues" par sens |
+| Structured data | Semantic search |
+| Relations (user → trips) | Vector similarity |
+| ACID transactions | Fast approximate search (ANN) |
+| Exact queries | "Fuzzy" queries by meaning |
 
-### Implémentation : Use Case de sauvegarde
+### Implementation: Save Use Case
 
 ```typescript
 // lib/application/use-cases/save-trip.use-case.ts
@@ -223,55 +223,55 @@ export class SaveTripUseCase {
     console.log('📝 SaveTripUseCase: Starting dual-storage save...');
 
     // ═══════════════════════════════════════════════════════════════════
-    // ÉTAPE 1 : Sauvegarder dans PostgreSQL (données structurées)
+    // STEP 1: Save to PostgreSQL (structured data)
     // ═══════════════════════════════════════════════════════════════════
     console.log('1️⃣ Saving to PostgreSQL...');
     const tripId = await this.tripRepository.save(data);
     // → INSERT INTO trips (id, user_id, destination, ...) VALUES (...)
 
     // ═══════════════════════════════════════════════════════════════════
-    // ÉTAPE 2 : Générer un résumé textuel pour l'embedding
+    // STEP 2: Generate a text summary for the embedding
     // ═══════════════════════════════════════════════════════════════════
     // 
-    // POURQUOI ? L'embedding doit capturer le "sens" du voyage.
-    // On crée donc un texte descriptif qui résume toutes les infos clés.
+    // WHY? The embedding must capture the "meaning" of the trip.
+    // So we create a descriptive text that summarizes all key info.
     //
     console.log('2️⃣ Generating summary text...');
     const summaryText = this.generateSummaryText(data);
-    // Exemple: "7-day trip to LIS from CDG for 2 people. 
+    // Example: "7-day trip to LIS from CDG for 2 people. 
     //           Total budget: $2950. Includes 3 flight options: TAP, Iberia.
     //           Hotels: Pestana Palace, Four Seasons. 
     //           Activities: cultural, beach, food."
 
     // ═══════════════════════════════════════════════════════════════════
-    // ÉTAPE 3 : Convertir le résumé en embedding (vecteur numérique)
+    // STEP 3: Convert the summary to an embedding (numeric vector)
     // ═══════════════════════════════════════════════════════════════════
     console.log('3️⃣ Generating embedding...');
     const embedding = await this.embeddingsService.generate(summaryText);
-    // → Appel API OpenAI
-    // → Retourne: [0.0234, -0.0891, 0.0456, ...] (1536 nombres)
+    // → OpenAI API call
+    // → Returns: [0.0234, -0.0891, 0.0456, ...] (1536 numbers)
     console.log(`✅ Generated embedding (${embedding.length} dimensions)`);
 
     // ═══════════════════════════════════════════════════════════════════
-    // ÉTAPE 4 : Construire le payload (métadonnées pour filtrage)
+    // STEP 4: Build the payload (metadata for filtering)
     // ═══════════════════════════════════════════════════════════════════
     //
-    // Le payload permet de FILTRER les résultats lors de la recherche.
-    // Ex: "Cherche des voyages similaires MAIS seulement en 'economy'"
+    // The payload allows FILTERING results during search.
+    // Ex: "Find similar trips BUT only in 'economy'"
     //
     console.log('4️⃣ Building vector payload...');
     const payload: TripVectorPayload = {
       trip_id: tripId,
       user_id: data.userId,
       title: `Trip to ${data.formInput.destinationCity}`,
-      destination: data.formInput.destinationCity,        // Pour filtrer par destination
+      destination: data.formInput.destinationCity,        // To filter by destination
       departure_city: data.formInput.departureCity,
       departure_date: data.formInput.departureDate,
       stay_duration: data.formInput.stayDuration,
       num_people: data.formInput.numPeople,
-      budget_category: data.formInput.budgetCategory,     // Pour filtrer par budget
+      budget_category: data.formInput.budgetCategory,     // To filter by budget
       total_budget: data.estimatedBudget?.totalEstimated || 0,
-      summary_text: summaryText,                          // Le texte original
+      summary_text: summaryText,                          // The original text
       num_flights: data.flights?.length || 0,
       num_hotels: data.hotels?.length || 0,
       num_activities: data.activities?.length || 0,
@@ -281,24 +281,24 @@ export class SaveTripUseCase {
     };
 
     // ═══════════════════════════════════════════════════════════════════
-    // ÉTAPE 5 : Upserter dans Qdrant (vecteur + payload)
+    // STEP 5: Upsert to Qdrant (vector + payload)
     // ═══════════════════════════════════════════════════════════════════
     console.log('5️⃣ Upserting to Qdrant...');
     await this.vectorRepository.upsert(tripId, embedding, payload);
-    // → Le trip est maintenant searchable par similarité sémantique !
+    // → The trip is now searchable by semantic similarity!
 
     console.log('✅ SaveTripUseCase: Dual-storage save completed!');
     return tripId;
   }
 
   /**
-   * Génère un texte descriptif du voyage pour l'embedding.
+   * Generates a descriptive text of the trip for the embedding.
    * 
-   * IMPORTANT: La qualité de ce texte impacte directement la qualité
-   * de la recherche sémantique. Il doit être :
-   * - Descriptif (pas juste des mots-clés)
-   * - Complet (toutes les infos importantes)
-   * - Naturel (comme un humain décrirait le voyage)
+   * IMPORTANT: The quality of this text directly impacts the quality
+   * of semantic search. It must be:
+   * - Descriptive (not just keywords)
+   * - Complete (all important info)
+   * - Natural (like a human would describe the trip)
    */
   private generateSummaryText(data: SaveTripData): string {
     const parts = [
@@ -331,14 +331,14 @@ export class SaveTripUseCase {
 }
 ```
 
-### Implémentation : Repository Qdrant
+### Implementation: Qdrant Repository
 
 ```typescript
 // lib/infrastructure/qdrant/vector-repository.ts
 
 import { QdrantClient } from '@qdrant/js-client-rest';
 
-const VECTOR_SIZE = 1536;  // Taille des embeddings OpenAI
+const VECTOR_SIZE = 1536;  // Size of OpenAI embeddings
 const COLLECTION_NAME = 'user_trips';
 
 export class QdrantVectorRepository implements IVectorRepository {
@@ -346,7 +346,7 @@ export class QdrantVectorRepository implements IVectorRepository {
   private collectionCreated = false;
 
   constructor() {
-    // Connexion au cluster Qdrant (cloud ou local)
+    // Connect to Qdrant cluster (cloud or local)
     this.client = new QdrantClient({
       url: process.env.QDRANT_URL,      // https://xxx.cloud.qdrant.io:6333
       apiKey: process.env.QDRANT_API_KEY,
@@ -355,8 +355,8 @@ export class QdrantVectorRepository implements IVectorRepository {
   }
 
   /**
-   * S'assure que la collection existe avant toute opération.
-   * Crée la collection si elle n'existe pas.
+   * Ensures the collection exists before any operation.
+   * Creates the collection if it doesn't exist.
    */
   private async ensureCollection(): Promise<void> {
     if (this.collectionCreated) return;
@@ -365,12 +365,12 @@ export class QdrantVectorRepository implements IVectorRepository {
       await this.client.getCollection(COLLECTION_NAME);
       this.collectionCreated = true;
     } catch {
-      // La collection n'existe pas, on la crée
+      // Collection doesn't exist, create it
       console.log('📦 Creating Qdrant collection:', COLLECTION_NAME);
       await this.client.createCollection(COLLECTION_NAME, {
         vectors: {
           size: VECTOR_SIZE,    // 1536 dimensions
-          distance: 'Cosine',   // Similarité cosinus (meilleur pour le texte)
+          distance: 'Cosine',   // Cosine similarity (best for text)
         },
       });
       this.collectionCreated = true;
@@ -378,11 +378,11 @@ export class QdrantVectorRepository implements IVectorRepository {
   }
 
   /**
-   * Insère ou met à jour un point (vecteur + payload) dans Qdrant.
+   * Inserts or updates a point (vector + payload) in Qdrant.
    * 
-   * @param tripId - L'ID unique du trip (utilisé comme ID du point)
-   * @param vector - L'embedding du trip (1536 dimensions)
-   * @param payload - Les métadonnées pour le filtrage
+   * @param tripId - The unique trip ID (used as point ID)
+   * @param vector - The trip embedding (1536 dimensions)
+   * @param payload - Metadata for filtering
    */
   async upsert(
     tripId: string, 
@@ -392,12 +392,12 @@ export class QdrantVectorRepository implements IVectorRepository {
     await this.ensureCollection();
 
     await this.client.upsert(COLLECTION_NAME, {
-      wait: true,  // Attendre que l'opération soit confirmée
+      wait: true,  // Wait for operation to be confirmed
       points: [
         {
-          id: tripId,       // UUID comme identifiant
-          vector: vector,   // [0.12, -0.34, ...] (1536 nombres)
-          payload: payload, // Métadonnées pour filtrage et affichage
+          id: tripId,       // UUID as identifier
+          vector: vector,   // [0.12, -0.34, ...] (1536 numbers)
+          payload: payload, // Metadata for filtering and display
         }
       ],
     });
@@ -409,29 +409,29 @@ export class QdrantVectorRepository implements IVectorRepository {
 
 ---
 
-## 4. Le Retrieval - Recherche sémantique
+## 4. Retrieval - Semantic Search
 
-### Comment fonctionne la recherche ?
+### How Does Search Work?
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         FLUX DE RECHERCHE                                    │
+│                         SEARCH FLOW                                          │
 │                                                                              │
 │  Query: "beach vacation in Europe"                                          │
 │       │                                                                      │
 │       ▼                                                                      │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  ÉTAPE 1 : Générer l'embedding de la query                          │   │
+│  │  STEP 1: Generate the query embedding                                │   │
 │  │                                                                      │   │
 │  │  "beach vacation in Europe" → [0.23, -0.45, 0.12, ...]              │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │       │                                                                      │
 │       ▼                                                                      │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  ÉTAPE 2 : Recherche ANN (Approximate Nearest Neighbors)            │   │
+│  │  STEP 2: ANN Search (Approximate Nearest Neighbors)                  │   │
 │  │                                                                      │   │
-│  │  Qdrant compare le vecteur query avec TOUS les vecteurs stockés     │   │
-│  │  et retourne les K plus proches (par similarité cosinus)            │   │
+│  │  Qdrant compares the query vector with ALL stored vectors            │   │
+│  │  and returns the K closest (by cosine similarity)                    │   │
 │  │                                                                      │   │
 │  │  Query vector ──────┬──────────────────────────────────────────     │   │
 │  │                     │                                                │   │
@@ -443,7 +443,7 @@ export class QdrantVectorRepository implements IVectorRepository {
 │       │                                                                      │
 │       ▼                                                                      │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  ÉTAPE 3 : Retourner les résultats avec scores                      │   │
+│  │  STEP 3: Return results with scores                                  │   │
 │  │                                                                      │   │
 │  │  [                                                                   │   │
 │  │    { trip: "Lisbon", score: 0.88, payload: {...} },                 │   │
@@ -455,21 +455,21 @@ export class QdrantVectorRepository implements IVectorRepository {
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Implémentation : Méthode de recherche
+### Implementation: Search Method
 
 ```typescript
-// lib/infrastructure/qdrant/vector-repository.ts (suite)
+// lib/infrastructure/qdrant/vector-repository.ts (continued)
 
 export class QdrantVectorRepository implements IVectorRepository {
-  // ... (constructeur et upsert ci-dessus)
+  // ... (constructor and upsert above)
 
   /**
-   * Recherche sémantique avec filtres optionnels.
+   * Semantic search with optional filters.
    * 
-   * @param queryVector - L'embedding de la requête utilisateur
-   * @param filter - Filtres optionnels (user_id, destination, budget)
-   * @param limit - Nombre max de résultats
-   * @returns Les trips les plus similaires avec leur score
+   * @param queryVector - The embedding of the user query
+   * @param filter - Optional filters (user_id, destination, budget)
+   * @param limit - Max number of results
+   * @returns The most similar trips with their scores
    */
   async search(
     queryVector: number[],
@@ -479,16 +479,16 @@ export class QdrantVectorRepository implements IVectorRepository {
     await this.ensureCollection();
 
     // ═══════════════════════════════════════════════════════════════════
-    // Construction dynamique des filtres
+    // Dynamic filter construction
     // ═══════════════════════════════════════════════════════════════════
     // 
-    // Les filtres permettent de COMBINER recherche sémantique + critères exacts.
-    // Ex: "Trouve des voyages similaires à 'plage' MAIS seulement en 'economy'"
+    // Filters allow COMBINING semantic search + exact criteria.
+    // Ex: "Find trips similar to 'beach' BUT only in 'economy'"
     //
     const mustConditions: any[] = [];
 
-    // Filtre par utilisateur (optionnel)
-    // Si non fourni, on cherche dans TOUS les trips (découverte)
+    // Filter by user (optional)
+    // If not provided, search ALL trips (discovery)
     if (filter.user_id) {
       mustConditions.push({
         key: 'user_id',
@@ -496,7 +496,7 @@ export class QdrantVectorRepository implements IVectorRepository {
       });
     }
 
-    // Filtre par destination (optionnel)
+    // Filter by destination (optional)
     if (filter.destination) {
       mustConditions.push({
         key: 'destination',
@@ -504,7 +504,7 @@ export class QdrantVectorRepository implements IVectorRepository {
       });
     }
 
-    // Filtre par catégorie de budget (optionnel)
+    // Filter by budget category (optional)
     if (filter.budget_category) {
       mustConditions.push({
         key: 'budget_category',
@@ -513,43 +513,43 @@ export class QdrantVectorRepository implements IVectorRepository {
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // Construction de la requête de recherche
+    // Build the search query
     // ═══════════════════════════════════════════════════════════════════
     const searchParams: any = {
-      vector: queryVector,  // Le vecteur à comparer
-      limit,                // Nombre de résultats max
+      vector: queryVector,  // The vector to compare
+      limit,                // Max number of results
     };
 
-    // N'ajouter le filtre que s'il y a des conditions
+    // Only add filter if there are conditions
     if (mustConditions.length > 0) {
       searchParams.filter = { must: mustConditions };
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // Exécution de la recherche
+    // Execute the search
     // ═══════════════════════════════════════════════════════════════════
     const searchResult = await this.client.search(COLLECTION_NAME, searchParams);
 
-    // Transformer les résultats Qdrant en notre format
+    // Transform Qdrant results to our format
     return searchResult.map((result) => ({
       id: result.id as string,
-      score: result.score,  // Similarité cosinus (0.0 - 1.0)
+      score: result.score,  // Cosine similarity (0.0 - 1.0)
       payload: result.payload as TripVectorPayload,
     }));
   }
 
   /**
-   * Récupère un point par son ID (avec son vecteur).
+   * Retrieves a point by its ID (with its vector).
    * 
-   * Utilisé pour "find similar trips" : on récupère le vecteur d'un trip
-   * existant et on cherche les trips similaires.
+   * Used for "find similar trips": we retrieve the vector of an existing
+   * trip and search for similar trips.
    */
   async getById(tripId: string): Promise<VectorPoint | null> {
     await this.ensureCollection();
 
     const result = await this.client.retrieve(COLLECTION_NAME, {
       ids: [tripId],
-      with_vector: true,   // IMPORTANT: inclure le vecteur
+      with_vector: true,   // IMPORTANT: include the vector
       with_payload: true,
     });
 
@@ -557,14 +557,14 @@ export class QdrantVectorRepository implements IVectorRepository {
 
     return {
       id: result[0].id as string,
-      vector: result[0].vector as number[],  // Le vecteur pour recherche
+      vector: result[0].vector as number[],  // The vector for search
       payload: result[0].payload as TripVectorPayload,
     };
   }
 }
 ```
 
-### Implémentation : Use Case de recherche
+### Implementation: Search Use Case
 
 ```typescript
 // lib/application/use-cases/search-trips.use-case.ts
@@ -576,36 +576,36 @@ export class SearchTripsUseCase implements IRetrievalService {
   ) {}
 
   /**
-   * Recherche de trips par requête en langage naturel.
+   * Search trips by natural language query.
    * 
-   * C'est LE cœur du système RAG côté retrieval.
+   * This is THE heart of the RAG system on the retrieval side.
    */
   async searchTrips(query: SemanticSearchQuery): Promise<RetrievalResult[]> {
     console.log(`🔍 SearchTripsUseCase: Searching for "${query.query}"`);
 
     try {
       // ═══════════════════════════════════════════════════════════════════
-      // ÉTAPE 1 : Convertir la requête en embedding
+      // STEP 1: Convert the query to an embedding
       // ═══════════════════════════════════════════════════════════════════
       // 
-      // La requête utilisateur est en langage naturel.
-      // On la convertit en vecteur pour pouvoir la comparer aux trips stockés.
+      // The user query is in natural language.
+      // We convert it to a vector to compare with stored trips.
       //
       console.log('1️⃣ Generating query embedding...');
       const queryEmbedding = await this.embeddingsService.generate(query.query);
       // "beach vacation in Europe" → [0.23, -0.45, 0.12, ...]
 
       // ═══════════════════════════════════════════════════════════════════
-      // ÉTAPE 2 : Construire les filtres
+      // STEP 2: Build filters
       // ═══════════════════════════════════════════════════════════════════
       const filter: VectorSearchFilter = {
-        user_id: query.userId,  // Optionnel : si absent, cherche partout
+        user_id: query.userId,  // Optional: if absent, search everywhere
         destination: query.filters?.destination,
         budget_category: query.filters?.budgetCategory,
       };
 
       // ═══════════════════════════════════════════════════════════════════
-      // ÉTAPE 3 : Recherche vectorielle dans Qdrant
+      // STEP 3: Vector search in Qdrant
       // ═══════════════════════════════════════════════════════════════════
       console.log('2️⃣ Searching vector database...');
       const searchResults = await this.vectorRepository.search(
@@ -617,7 +617,7 @@ export class SearchTripsUseCase implements IRetrievalService {
       console.log(`✅ Found ${searchResults.length} results`);
 
       // ═══════════════════════════════════════════════════════════════════
-      // ÉTAPE 4 : Transformer en résultats métier
+      // STEP 4: Transform to business results
       // ═══════════════════════════════════════════════════════════════════
       return searchResults.map((result) => ({
         tripId: result.payload.trip_id,
@@ -630,7 +630,7 @@ export class SearchTripsUseCase implements IRetrievalService {
         budgetCategory: result.payload.budget_category,
         totalBudget: result.payload.total_budget,
         summaryText: result.payload.summary_text,
-        relevanceScore: result.score,  // Score de similarité (0-1)
+        relevanceScore: result.score,  // Similarity score (0-1)
         createdAt: result.payload.created_at,
       }));
     } catch (error) {
@@ -640,9 +640,9 @@ export class SearchTripsUseCase implements IRetrievalService {
   }
 
   /**
-   * Trouve des trips similaires à un trip donné.
+   * Find trips similar to a given trip.
    * 
-   * Cas d'usage : "J'ai aimé mon voyage à Lisbonne, montre-moi des voyages similaires"
+   * Use case: "I liked my trip to Lisbon, show me similar trips"
    */
   async findSimilarTrips(
     tripId: string,
@@ -653,11 +653,11 @@ export class SearchTripsUseCase implements IRetrievalService {
 
     try {
       // ═══════════════════════════════════════════════════════════════════
-      // ÉTAPE 1 : Récupérer le vecteur du trip source
+      // STEP 1: Retrieve the source trip vector
       // ═══════════════════════════════════════════════════════════════════
       // 
-      // Au lieu de générer un nouvel embedding, on RÉUTILISE celui du trip.
-      // C'est plus rapide et plus précis.
+      // Instead of generating a new embedding, we REUSE the trip's existing one.
+      // This is faster and more accurate.
       //
       console.log('1️⃣ Retrieving source trip vector...');
       const sourcePoint = await this.vectorRepository.getById(tripId);
@@ -668,29 +668,29 @@ export class SearchTripsUseCase implements IRetrievalService {
       }
 
       // ═══════════════════════════════════════════════════════════════════
-      // ÉTAPE 2 : Chercher les trips similaires avec ce vecteur
+      // STEP 2: Search for similar trips with this vector
       // ═══════════════════════════════════════════════════════════════════
       console.log('2️⃣ Searching for similar trips...');
       const filter = { user_id: userId };
       
-      // On demande un résultat de plus pour exclure le trip source
+      // Request one extra result to exclude the source trip
       const searchResults = await this.vectorRepository.search(
-        sourcePoint.vector,  // Utilise le vecteur existant
+        sourcePoint.vector,  // Use the existing vector
         filter,
         limit + 1
       );
 
       // ═══════════════════════════════════════════════════════════════════
-      // ÉTAPE 3 : Exclure le trip source et formater
+      // STEP 3: Exclude the source trip and format
       // ═══════════════════════════════════════════════════════════════════
       const similarTrips = searchResults
-        .filter((result) => result.id !== tripId)  // Exclure le trip source
+        .filter((result) => result.id !== tripId)  // Exclude the source trip
         .slice(0, limit)
         .map((result) => ({
           tripId: result.payload.trip_id,
           title: result.payload.title,
           destination: result.payload.destination,
-          // ... autres champs
+          // ... other fields
           relevanceScore: result.score,
         }));
 
@@ -706,24 +706,24 @@ export class SearchTripsUseCase implements IRetrievalService {
 
 ---
 
-## 5. L'Agent - Utiliser le RAG dans un LLM
+## 5. The Agent - Using RAG in an LLM
 
-### Pourquoi des Tools ?
+### Why Tools?
 
-Un agent LLM ne peut pas directement accéder à Qdrant. On lui donne des **tools** (outils) qu'il peut appeler :
+An LLM agent cannot directly access Qdrant. We give it **tools** that it can call:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         AGENT AVEC RAG TOOLS                                 │
+│                         AGENT WITH RAG TOOLS                                 │
 │                                                                              │
-│  User: "Montre-moi des voyages similaires à mon trip à Lisbonne"            │
+│  User: "Show me trips similar to my Lisbon trip"                            │
 │       │                                                                      │
 │       ▼                                                                      │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  LLM (Claude/GPT) analyse la requête                                 │   │
+│  │  LLM (Claude/GPT) analyzes the request                               │   │
 │  │                                                                      │   │
-│  │  "L'utilisateur veut des trips similaires à Lisbonne.                │   │
-│  │   Je dois utiliser le tool 'search_trips' avec query='Lisbon'"       │   │
+│  │  "The user wants trips similar to Lisbon.                            │   │
+│  │   I need to use the 'search_trips' tool with query='Lisbon'"         │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │       │                                                                      │
 │       ▼ Tool Call                                                            │
@@ -734,28 +734,28 @@ Un agent LLM ne peut pas directement accéder à Qdrant. On lui donne des **tool
 │  │  SearchTripsUseCase.searchTrips()                                    │   │
 │  │       │                                                              │   │
 │  │       ▼                                                              │   │
-│  │  Qdrant: Recherche vectorielle                                       │   │
+│  │  Qdrant: Vector search                                               │   │
 │  │       │                                                              │   │
 │  │       ▼                                                              │   │
-│  │  Résultats: [Barcelona (0.88), Porto (0.85), Seville (0.82)]        │   │
+│  │  Results: [Barcelona (0.88), Porto (0.85), Seville (0.82)]          │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │       │                                                                      │
 │       ▼ Tool Result                                                          │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  LLM génère la réponse avec le contexte                              │   │
+│  │  LLM generates the response with context                             │   │
 │  │                                                                      │   │
-│  │  "Basé sur votre voyage à Lisbonne, voici 3 destinations similaires: │   │
-│  │   1. **Barcelona** (88% similaire) - Plages, culture, gastronomie   │   │
-│  │   2. **Porto** (85% similaire) - Même pays, ambiance similaire      │   │
-│  │   3. **Seville** (82% similaire) - Architecture, climat méditerranéen"│   │
+│  │  "Based on your trip to Lisbon, here are 3 similar destinations:     │   │
+│  │   1. **Barcelona** (88% similar) - Beaches, culture, gastronomy     │   │
+│  │   2. **Porto** (85% similar) - Same country, similar vibe           │   │
+│  │   3. **Seville** (82% similar) - Architecture, Mediterranean climate"│   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Implémentation : Tools externalisés
+### Implementation: Externalized Tools
 
-On extrait les tools dans un module dédié pour la réutilisabilité :
+We extract tools into a dedicated module for reusability:
 
 ```typescript
 // ai/tools/retrieval-tools.ts
@@ -767,9 +767,9 @@ import { QdrantVectorRepository } from "@/lib/infrastructure/qdrant/vector-repos
 import { OpenAIEmbeddingsService } from "@/lib/infrastructure/embeddings/openai-service";
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Lazy initialization du use case
+// Lazy initialization of the use case
 // ═══════════════════════════════════════════════════════════════════════════
-// On ne crée l'instance que quand on en a besoin (performance)
+// We only create the instance when needed (performance)
 let searchTripsUseCaseInstance: SearchTripsUseCase | null = null;
 
 function getSearchTripsUseCase(): SearchTripsUseCase {
@@ -785,19 +785,19 @@ function getSearchTripsUseCase(): SearchTripsUseCase {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TOOL 1 : Recherche sémantique de trips
+// TOOL 1: Semantic trip search
 // ═══════════════════════════════════════════════════════════════════════════
 export const searchTripsTool = new DynamicStructuredTool({
-  // Nom du tool (utilisé par le LLM pour l'appeler)
+  // Tool name (used by the LLM to call it)
   name: "search_trips",
   
-  // Description (le LLM l'utilise pour décider QUAND utiliser ce tool)
+  // Description (the LLM uses this to decide WHEN to use this tool)
   description: `Search through all saved trips using natural language. 
     Use this to find trip inspiration, discover destinations, or find trips 
     matching specific criteria. Searches across ALL trips in the database 
     for maximum discovery.`,
   
-  // Schéma des paramètres (validé par Zod)
+  // Parameter schema (validated by Zod)
   schema: z.object({
     query: z.string().describe(
       "Natural language search query (e.g., 'beach vacation in Europe', " +
@@ -817,7 +817,7 @@ export const searchTripsTool = new DynamicStructuredTool({
     ),
   }),
   
-  // Fonction exécutée quand le LLM appelle ce tool
+  // Function executed when the LLM calls this tool
   func: async ({ query, userId, destination, budgetCategory, limit }) => {
     try {
       const searchUseCase = getSearchTripsUseCase();
@@ -828,7 +828,7 @@ export const searchTripsTool = new DynamicStructuredTool({
         limit,
       });
       
-      // Retourner un JSON que le LLM peut interpréter
+      // Return JSON that the LLM can interpret
       return JSON.stringify({
         success: true,
         count: results.length,
@@ -855,7 +855,7 @@ export const searchTripsTool = new DynamicStructuredTool({
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TOOL 2 : Trouver des trips similaires
+// TOOL 2: Find similar trips
 // ═══════════════════════════════════════════════════════════════════════════
 export const findSimilarTripsTool = new DynamicStructuredTool({
   name: "find_similar_trips",
@@ -903,7 +903,7 @@ export const findSimilarTripsTool = new DynamicStructuredTool({
 });
 ```
 
-### Index des tools
+### Tools Index
 
 ```typescript
 // ai/tools/index.ts
@@ -913,22 +913,22 @@ export { getCurrentDateTool } from "./date-tool";
 export { searchTripsTool, findSimilarTripsTool } from "./retrieval-tools";
 
 /**
- * Récupère tous les tools disponibles (MCP + custom)
+ * Retrieves all available tools (MCP + custom)
  */
 export async function getAllTools(): Promise<DynamicStructuredTool[]> {
-  const mcpTools = await getMcpTools();  // Tools Amadeus (flights, hotels, etc.)
+  const mcpTools = await getMcpTools();  // Amadeus tools (flights, hotels, etc.)
   
   const customTools = [
-    getCurrentDateTool,      // Date actuelle
-    searchTripsTool,         // Recherche sémantique
-    findSimilarTripsTool,    // Trips similaires
+    getCurrentDateTool,      // Current date
+    searchTripsTool,         // Semantic search
+    findSimilarTripsTool,    // Similar trips
   ];
   
   return [...mcpTools, ...customTools];
 }
 ```
 
-### Agent simplifié
+### Simplified Agent
 
 ```typescript
 // ai/agents/agent.ts
@@ -937,10 +937,10 @@ import { getAllTools } from "../tools";
 
 class TravelAssistantAgent {
   async initialize(): Promise<void> {
-    // Charger TOUS les tools depuis le module externalisé
+    // Load ALL tools from the externalized module
     this.tools = await getAllTools();
 
-    // Créer l'agent avec les tools
+    // Create the agent with tools
     this.graph = createAgent({
       model: this.model,
       tools: this.tools,
@@ -956,42 +956,42 @@ class TravelAssistantAgent {
 
 ---
 
-## 6. Résumé et Architecture finale
+## 6. Summary and Final Architecture
 
-### Vue d'ensemble du système
+### System Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         ARCHITECTURE RAG COMPLÈTE                            │
+│                         COMPLETE RAG ARCHITECTURE                            │
 │                                                                              │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                        PHASE 1 : INGESTION                           │   │
+│  │                        PHASE 1: INGESTION                            │   │
 │  │                                                                      │   │
-│  │  Trip confirmé → Résumé textuel → Embedding OpenAI → Qdrant         │   │
+│  │  Confirmed trip → Text summary → OpenAI Embedding → Qdrant          │   │
 │  │                                                                      │   │
-│  │  "7-day trip to Lisbon..."  →  [0.12, -0.34, ...]  →  Point stocké  │   │
+│  │  "7-day trip to Lisbon..."  →  [0.12, -0.34, ...]  →  Stored point  │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                              │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                        PHASE 2 : RETRIEVAL                           │   │
+│  │                        PHASE 2: RETRIEVAL                            │   │
 │  │                                                                      │   │
-│  │  Query utilisateur → Embedding → Recherche ANN → Top K résultats    │   │
+│  │  User query → Embedding → ANN Search → Top K results                │   │
 │  │                                                                      │   │
 │  │  "beach vacation"  →  [0.23, -0.45, ...]  →  [Lisbon, Barcelona...] │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                              │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                        PHASE 3 : GENERATION                          │   │
+│  │                        PHASE 3: GENERATION                           │   │
 │  │                                                                      │   │
-│  │  LLM + Contexte récupéré → Réponse enrichie et personnalisée        │   │
+│  │  LLM + Retrieved context → Enriched and personalized response       │   │
 │  │                                                                      │   │
-│  │  "Basé sur vos préférences, je recommande Barcelona (88% match)..." │   │
+│  │  "Based on your preferences, I recommend Barcelona (88% match)..."  │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Structure des fichiers
+### File Structure
 
 ```
 lib/
@@ -1000,7 +1000,7 @@ lib/
 │   ├── vector/repository.ts         # IVectorRepository
 │   └── retrieval/service.ts         # IRetrievalService
 │
-├── infrastructure/                  # Implémentations (Adapters)
+├── infrastructure/                  # Implementations (Adapters)
 │   ├── embeddings/openai-service.ts # OpenAIEmbeddingsService
 │   └── qdrant/vector-repository.ts  # QdrantVectorRepository
 │
@@ -1009,71 +1009,71 @@ lib/
     └── search-trips.use-case.ts     # Retrieval (semantic search)
 
 ai/
-└── tools/                           # Tools pour l'agent
-    ├── index.ts                     # Export central
-    ├── mcp-client.ts                # Client MCP (Amadeus)
-    ├── date-tool.ts                 # Tool date
+└── tools/                           # Tools for the agent
+    ├── index.ts                     # Central export
+    ├── mcp-client.ts                # MCP Client (Amadeus)
+    ├── date-tool.ts                 # Date tool
     └── retrieval-tools.ts           # search_trips, find_similar_trips
 ```
 
 ---
 
-## 7. Key Takeaways - Ce qu'il faut retenir
+## 7. Key Takeaways
 
-### 🎯 Concepts fondamentaux
+### 🎯 Fundamental Concepts
 
-| Concept | Explication |
+| Concept | Explanation |
 |---------|-------------|
-| **Embedding** | Représentation numérique du sens d'un texte (1536 dimensions) |
-| **Similarité cosinus** | Mesure de l'angle entre deux vecteurs (0 = différent, 1 = identique) |
-| **ANN (Approximate Nearest Neighbors)** | Algorithme de recherche rapide dans un espace vectoriel |
-| **Payload** | Métadonnées stockées avec le vecteur pour filtrage |
+| **Embedding** | Numerical representation of text meaning (1536 dimensions) |
+| **Cosine similarity** | Measure of angle between two vectors (0 = different, 1 = identical) |
+| **ANN (Approximate Nearest Neighbors)** | Fast search algorithm in vector space |
+| **Payload** | Metadata stored with the vector for filtering |
 
-### 🔄 Le flux RAG en 3 étapes
+### 🔄 The RAG Flow in 3 Steps
 
-1. **RETRIEVAL** : Convertir la query en vecteur → Chercher les K plus proches
-2. **AUGMENTATION** : Enrichir le prompt du LLM avec le contexte trouvé
-3. **GENERATION** : Le LLM génère une réponse basée sur le contexte
+1. **RETRIEVAL**: Convert query to vector → Search for K nearest
+2. **AUGMENTATION**: Enrich the LLM prompt with found context
+3. **GENERATION**: The LLM generates a response based on context
 
-### 💡 Bonnes pratiques
+### 💡 Best Practices
 
-| Pratique | Pourquoi |
-|----------|----------|
-| **Dual storage** | PostgreSQL pour ACID, Qdrant pour sémantique |
-| **Résumé textuel riche** | La qualité de l'embedding dépend de la qualité du texte |
-| **Filtres sur payload** | Combiner recherche sémantique + critères exacts |
-| **Lazy initialization** | Ne créer les services que quand nécessaire |
-| **Tools externalisés** | Réutilisabilité entre agents |
+| Practice | Why |
+|----------|-----|
+| **Dual storage** | PostgreSQL for ACID, Qdrant for semantics |
+| **Rich text summary** | Embedding quality depends on text quality |
+| **Payload filters** | Combine semantic search + exact criteria |
+| **Lazy initialization** | Only create services when needed |
+| **Externalized tools** | Reusability between agents |
 
-### ⚠️ Pièges à éviter
+### ⚠️ Pitfalls to Avoid
 
-| Piège | Solution |
-|-------|----------|
-| Texte trop court pour l'embedding | Générer un résumé descriptif complet |
-| Oublier de créer la collection | Utiliser `ensureCollection()` |
-| Chercher uniquement ses propres trips | Rendre `user_id` optionnel pour la découverte |
-| Retourner le trip source dans "similar" | Filtrer par ID et demander `limit + 1` |
+| Pitfall | Solution |
+|---------|----------|
+| Text too short for embedding | Generate a complete descriptive summary |
+| Forgetting to create collection | Use `ensureCollection()` |
+| Searching only own trips | Make `user_id` optional for discovery |
+| Returning source trip in "similar" | Filter by ID and request `limit + 1` |
 
-### 📊 Métriques typiques
+### 📊 Typical Metrics
 
-| Métrique | Valeur |
-|----------|--------|
-| Latence embedding | ~100-200ms |
-| Latence recherche Qdrant | ~50-100ms |
-| Coût embedding (1M tokens) | ~$0.02 |
-| Dimensions vecteur | 1536 (OpenAI) |
+| Metric | Value |
+|--------|-------|
+| Embedding latency | ~100-200ms |
+| Qdrant search latency | ~50-100ms |
+| Embedding cost (1M tokens) | ~$0.02 |
+| Vector dimensions | 1536 (OpenAI) |
 
 ---
 
-## 8. Seed Script - Génération de données synthétiques
+## 8. Seed Script - Synthetic Data Generation
 
-### Pourquoi un script de seed ?
+### Why a Seed Script?
 
-Pour tester et démontrer un système RAG, il faut des données. Plutôt que de créer manuellement des centaines de trips via l'UI, on utilise un **script de seed** qui :
+To test and demonstrate a RAG system, you need data. Rather than manually creating hundreds of trips via the UI, we use a **seed script** that:
 
-1. **Génère des données synthétiques** réalistes
-2. **Crée les embeddings** via OpenAI
-3. **Insère directement dans Qdrant** (bypass PostgreSQL pour la rapidité)
+1. **Generates realistic synthetic data**
+2. **Creates embeddings** via OpenAI
+3. **Inserts directly into Qdrant** (bypasses PostgreSQL for speed)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -1087,42 +1087,42 @@ Pour tester et démontrer un système RAG, il faut des données. Plutôt que de 
 │   └──────────────┘    └──────────────┘    └──────────────┘                  │
 │         │                    │                    │                          │
 │         ▼                    ▼                    ▼                          │
-│   • Destinations EU    • text-embedding-    • Collection:                   │
+│   • EU Destinations    • text-embedding-    • Collection:                   │
 │   • Flights/Hotels       3-small             user_trips                     │
-│   • Activities         • 1536 dimensions    • Payload avec                  │
-│   • Budget estimates   • ~100ms/call          métadonnées                   │
+│   • Activities         • 1536 dimensions    • Payload with                  │
+│   • Budget estimates   • ~100ms/call          metadata                      │
 │                                                                              │
-│   ⏱️ ~300ms par trip (embedding + upsert)                                   │
-│   📊 100 trips en ~30 secondes                                              │
+│   ⏱️ ~300ms per trip (embedding + upsert)                                   │
+│   📊 100 trips in ~30 seconds                                               │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Architecture du script
+### Script Architecture
 
 ```typescript
 // scripts/seed-trips.ts
 
-// 1️⃣ Charger les variables d'environnement AVANT les imports
+// 1️⃣ Load environment variables BEFORE imports
 import dotenv from 'dotenv';
 import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-// 2️⃣ Importer uniquement Qdrant + OpenAI (pas de PostgreSQL)
+// 2️⃣ Import only Qdrant + OpenAI (no PostgreSQL)
 import { QdrantVectorRepository } from '../lib/infrastructure/qdrant/vector-repository';
 import { OpenAIEmbeddingsService } from '../lib/infrastructure/embeddings/openai-service';
 import { TripVectorPayload } from '../lib/domain/vector/repository';
 ```
 
-> ⚠️ **Important** : Les imports TypeScript sont "hoisted" (exécutés en premier). 
-> Il faut donc charger dotenv AVANT d'importer les modules qui dépendent des variables d'environnement.
+> ⚠️ **Important**: TypeScript imports are "hoisted" (executed first). 
+> Therefore, you must load dotenv BEFORE importing modules that depend on environment variables.
 
-### Données synthétiques réalistes
+### Realistic Synthetic Data
 
-Le script génère des données variées pour tester la recherche sémantique :
+The script generates varied data to test semantic search:
 
 ```typescript
-// Destinations européennes avec thèmes pour la recherche sémantique
+// European destinations with themes for semantic search
 const EUROPEAN_DESTINATIONS: Destination[] = [
   { code: 'CDG', name: 'Paris', country: 'France', themes: ['culture', 'romance', 'art'] },
   { code: 'BCN', name: 'Barcelona', country: 'Spain', themes: ['beach', 'culture', 'nightlife'] },
@@ -1132,16 +1132,16 @@ const EUROPEAN_DESTINATIONS: Destination[] = [
   // ... 20+ destinations
 ];
 
-// Villes de départ
+// Departure cities
 const DEPARTURE_CITIES = ['CDG', 'LHR', 'FRA', 'AMS', 'MAD', 'FCO', 'MUC', 'ZRH'];
 
-// Catégories de budget
+// Budget categories
 type BudgetCategory = 'economy' | 'standard' | 'premium';
 ```
 
-### Génération du texte pour l'embedding
+### Generating Text for Embedding
 
-La qualité de la recherche sémantique dépend de la **richesse du texte** utilisé pour l'embedding :
+The quality of semantic search depends on the **richness of the text** used for the embedding:
 
 ```typescript
 function generateSummaryText(
@@ -1164,7 +1164,7 @@ function generateSummaryText(
     `Budget category: ${budgetCategory}`,
   ];
 
-  // Ajouter les détails pour enrichir le contexte sémantique
+  // Add details to enrich semantic context
   if (flights.length) {
     parts.push(`Flight options: ${flights.map(f => f.airline).join(', ')}`);
   }
@@ -1175,14 +1175,14 @@ function generateSummaryText(
     parts.push(`Activities: ${activities.map(a => a.name).join(', ')}`);
   }
 
-  // Les thèmes sont CRUCIAUX pour la recherche sémantique
+  // Themes are CRUCIAL for semantic search
   parts.push(`Themes: ${destination.themes.join(', ')}`);
 
   return parts.join('. ') + '.';
 }
 ```
 
-**Exemple de texte généré :**
+**Example of generated text:**
 ```
 "7-day trip to Barcelona. from CDG. for 2 people. Total budget: $2500. 
 Budget category: standard. Flight options: Air France, Vueling. 
@@ -1190,7 +1190,7 @@ Hotels: Hotel Arts, W Barcelona. Activities: Sagrada Familia Tour,
 Beach Day, Tapas Walking Tour. Themes: beach, culture, nightlife."
 ```
 
-### Insertion directe dans Qdrant
+### Direct Insertion into Qdrant
 
 ```typescript
 async function main() {
@@ -1198,19 +1198,19 @@ async function main() {
   const embeddingsService = new OpenAIEmbeddingsService();
 
   for (let i = 0; i < TRIP_COUNT; i++) {
-    // 1. Générer les données synthétiques
+    // 1. Generate synthetic data
     const destination = randomElement(EUROPEAN_DESTINATIONS);
     const flights = generateSyntheticFlights(...);
     const hotels = generateSyntheticHotels(...);
     const activities = generateSyntheticActivities(...);
 
-    // 2. Créer le texte pour l'embedding
+    // 2. Create text for embedding
     const summaryText = generateSummaryText(...);
 
-    // 3. Générer l'embedding via OpenAI
+    // 3. Generate embedding via OpenAI
     const embedding = await embeddingsService.generate(summaryText);
 
-    // 4. Construire le payload avec les métadonnées
+    // 4. Build payload with metadata
     const payload: TripVectorPayload = {
       trip_id: tripId,
       user_id: SEED_USER_ID,
@@ -1222,23 +1222,23 @@ async function main() {
       num_people: numPeople,
       budget_category: budgetCategory,
       total_budget: budget.totalEstimated,
-      summary_text: summaryText,  // Stocké pour debug/affichage
-      // ... autres métadonnées
+      summary_text: summaryText,  // Stored for debug/display
+      // ... other metadata
     };
 
-    // 5. Insérer dans Qdrant
+    // 5. Insert into Qdrant
     await vectorRepository.upsert(tripId, embedding, payload);
   }
 }
 ```
 
-### Utilisation
+### Usage
 
 ```bash
-# Générer 20 trips (défaut)
+# Generate 20 trips (default)
 pnpm tsx scripts/seed-trips.ts
 
-# Générer 100 trips
+# Generate 100 trips
 pnpm tsx scripts/seed-trips.ts --count=100
 
 # Output
@@ -1265,50 +1265,50 @@ pnpm tsx scripts/seed-trips.ts --count=100
 📝 Total trips in Qdrant: 100
 ```
 
-### Pourquoi bypasser PostgreSQL ?
+### Why Bypass PostgreSQL?
 
-| Approche | Avantages | Inconvénients |
+| Approach | Advantages | Disadvantages |
 |----------|-----------|---------------|
-| **Via SaveTripUseCase** | Données cohérentes PG + Qdrant | Nécessite connexion DB, plus lent |
-| **Direct Qdrant** | Rapide, simple, suffisant pour RAG | Pas de données en PostgreSQL |
+| **Via SaveTripUseCase** | Consistent data in PG + Qdrant | Requires DB connection, slower |
+| **Direct Qdrant** | Fast, simple, sufficient for RAG | No data in PostgreSQL |
 
-Pour le **testing du RAG**, seul Qdrant est nécessaire. Les données PostgreSQL ne sont utiles que pour l'affichage dans l'UI.
+For **RAG testing**, only Qdrant is needed. PostgreSQL data is only useful for UI display.
 
-### Bonnes pratiques du seed
+### Seed Best Practices
 
-| Pratique | Pourquoi |
-|----------|----------|
-| **Thèmes variés** | Permet de tester différentes requêtes sémantiques |
-| **Destinations réalistes** | Les embeddings captent mieux le contexte géographique |
-| **Texte riche** | Plus le texte est descriptif, meilleur est l'embedding |
-| **Delay entre inserts** | Évite le rate limiting de l'API OpenAI |
-| **User ID fixe** | Facilite le nettoyage des données de test |
+| Practice | Why |
+|----------|-----|
+| **Varied themes** | Allows testing different semantic queries |
+| **Realistic destinations** | Embeddings better capture geographic context |
+| **Rich text** | The more descriptive the text, the better the embedding |
+| **Delay between inserts** | Avoids OpenAI API rate limiting |
+| **Fixed user ID** | Makes cleaning up test data easier |
 
-### Vérification des données
+### Data Verification
 
-Après le seed, vous pouvez vérifier dans Qdrant :
+After seeding, you can verify in Qdrant:
 
 ```bash
-# Via l'API Qdrant (si local)
+# Via Qdrant API (if local)
 curl http://localhost:6333/collections/user_trips
 
-# Ou via le dashboard Qdrant Cloud
+# Or via Qdrant Cloud dashboard
 # https://cloud.qdrant.io
 ```
 
 ---
 
-## 9. Pour aller plus loin
+## 9. Going Further
 
-### Améliorations possibles
+### Possible Improvements
 
-1. **Chunking** : Découper les longs documents en morceaux
-2. **Reranking** : Utiliser un modèle de reranking après la recherche ANN
-3. **Hybrid search** : Combiner BM25 (keyword) + vecteurs
-4. **Caching** : Mettre en cache les embeddings fréquents
-5. **Batch ingestion** : Ingérer plusieurs documents en parallèle
+1. **Chunking**: Split long documents into pieces
+2. **Reranking**: Use a reranking model after ANN search
+3. **Hybrid search**: Combine BM25 (keyword) + vectors
+4. **Caching**: Cache frequent embeddings
+5. **Batch ingestion**: Ingest multiple documents in parallel
 
-### Ressources
+### Resources
 
 - [Qdrant Documentation](https://qdrant.tech/documentation/)
 - [OpenAI Embeddings Guide](https://platform.openai.com/docs/guides/embeddings)
@@ -1316,7 +1316,7 @@ curl http://localhost:6333/collections/user_trips
 
 ---
 
-## 10. Exemple d'utilisation
+## 10. Usage Example
 
 ### Via API
 
@@ -1332,26 +1332,26 @@ curl -X POST http://localhost:3000/api/trips/search \
 ### Via Agent Chat
 
 ```
-User: "Montre-moi des voyages similaires à mon trip à Lisbonne"
+User: "Show me trips similar to my Lisbon trip"
 
-Agent: [Appelle search_trips({ query: "Lisbon beach culture" })]
+Agent: [Calls search_trips({ query: "Lisbon beach culture" })]
        
        🔍 Searching for "Lisbon beach culture"
        1️⃣ Generating query embedding...
        2️⃣ Searching vector database...
        ✅ Found 3 results
 
-Agent: "Basé sur votre voyage à Lisbonne, voici 3 destinations similaires :
+Agent: "Based on your trip to Lisbon, here are 3 similar destinations:
         
-        1. **Barcelona** (88% similaire)
-           - 7 jours, budget $2500
-           - Plages, culture, gastronomie
+        1. **Barcelona** (88% similar)
+           - 7 days, budget $2500
+           - Beaches, culture, gastronomy
         
-        2. **Porto** (85% similaire)  
-           - 5 jours, budget $1800
-           - Même pays, ambiance similaire
+        2. **Porto** (85% similar)  
+           - 5 days, budget $1800
+           - Same country, similar vibe
         
-        3. **Seville** (82% similaire)
-           - 4 jours, budget $1500
-           - Architecture, climat méditerranéen"
+        3. **Seville** (82% similar)
+           - 4 days, budget $1500
+           - Architecture, Mediterranean climate"
 ```
