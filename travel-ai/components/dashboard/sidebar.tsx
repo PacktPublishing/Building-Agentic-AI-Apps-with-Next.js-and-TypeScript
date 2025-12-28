@@ -1,19 +1,20 @@
-"use client"
+'use client'
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { LogOut, User } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { useAuth } from "@/components/auth/auth-provider"
-import { Button } from "@/components/ui/button"
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { LogOut, User } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { ThemeToggle } from '@/components/theme-toggle'
+import { useAuth } from '@/components/auth/auth-provider'
+import { Button } from '@/components/ui/button'
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard" },
-  { name: "AI Assistant", href: "/dashboard/ai-chat" },
-  { name: "Trips", href: "/dashboard/trips" },
-  { name: "Settings", href: "/dashboard/settings" },
-  { name: "Profile", href: "/dashboard/profile" },
+  { name: 'Dashboard', href: '/dashboard' },
+  { name: 'AI Assistant', href: '/dashboard/ai-chat' },
+  { name: 'Orchestration', href: '/dashboard/orchestration' },
+  { name: 'Trips', href: '/dashboard/trips' },
+  { name: 'Settings', href: '/dashboard/settings' },
+  { name: 'Profile', href: '/dashboard/profile' },
 ]
 
 export function Sidebar() {
@@ -37,10 +38,10 @@ export function Sidebar() {
             key={item.name}
             href={item.href}
             className={cn(
-              "block px-4 py-2 rounded-md text-sm font-medium transition-colors",
+              'block px-4 py-2 rounded-md text-sm font-medium transition-colors',
               pathname === item.href
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             )}
           >
             {item.name}
@@ -65,7 +66,7 @@ export function Sidebar() {
             </div>
           </div>
         )}
-        
+
         {/* Boutons d'action */}
         <div className="space-y-2">
           <Button
@@ -77,7 +78,7 @@ export function Sidebar() {
             <LogOut className="w-4 h-4 mr-2" />
             Sign Out
           </Button>
-          
+
           <Link
             href="/"
             className="block px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors text-center"

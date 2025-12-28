@@ -83,6 +83,9 @@ importers:
       '@langchain/langgraph-cli':
         specifier: ^1.0.4
         version: 1.0.4(@langchain/core@1.1.0(openai@6.9.1(ws@8.18.3)(zod@3.25.76)))(@langchain/langgraph-checkpoint@1.0.0(@langchain/core@1.1.0(openai@6.9.1(ws@8.18.3)(zod@3.25.76))))(@langchain/langgraph-sdk@1.0.3(@langchain/core@1.1.0(openai@6.9.1(ws@8.18.3)(zod@3.25.76)))(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@langchain/langgraph@1.0.2(@langchain/core@1.1.0(openai@6.9.1(ws@8.18.3)(zod@3.25.76)))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(zod-to-json-schema@3.24.6(zod@3.25.76))(zod@3.25.76))(openai@6.9.1(ws@8.18.3)(zod@3.25.76))(typescript@5.9.3)
+      '@langchain/langgraph-swarm':
+        specifier: ^1.0.1
+        version: 1.0.1(@langchain/core@1.1.0(openai@6.9.1(ws@8.18.3)(zod@3.25.76)))(@langchain/langgraph@1.0.2(@langchain/core@1.1.0(openai@6.9.1(ws@8.18.3)(zod@3.25.76)))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(zod-to-json-schema@3.24.6(zod@3.25.76))(zod@3.25.76))
       '@langchain/mcp-adapters':
         specifier: ^0.6.0
         version: 0.6.0(@langchain/core@1.1.0(openai@6.9.1(ws@8.18.3)(zod@3.25.76)))
@@ -1722,6 +1725,13 @@ packages:
         optional: true
       react-dom:
         optional: true
+
+  '@langchain/langgraph-swarm@1.0.1':
+    resolution: {integrity: sha512-DmD1YEl+RcHaWR4bmBAyYA615toFarKqLZeS+ljPRzB/Ja/S+Go5vu8E3emshb997G3k0kYg3tnQzwC/GxZCVA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@langchain/core': ^1.0.1
+      '@langchain/langgraph': ^0.2.53 || ^0.3.0 || ^0.4.0 || ^1.0.0-alpha.5
 
   '@langchain/langgraph-ui@1.0.4':
     resolution: {integrity: sha512-ieX5Rgd7g/sn2mHan+L5EPTfBNIFgCOz1BjlVeoRhbCFw4Hv0cA8XGsOf24kv9i/wTmYdiei3+G0hjnflMOHLg==}
@@ -8205,6 +8215,12 @@ snapshots:
       '@langchain/core': 1.1.0(openai@6.9.1(ws@8.18.3)(zod@3.25.76))
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
+
+  '@langchain/langgraph-swarm@1.0.1(@langchain/core@1.1.0(openai@6.9.1(ws@8.18.3)(zod@3.25.76)))(@langchain/langgraph@1.0.2(@langchain/core@1.1.0(openai@6.9.1(ws@8.18.3)(zod@3.25.76)))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(zod-to-json-schema@3.24.6(zod@3.25.76))(zod@3.25.76))':
+    dependencies:
+      '@langchain/core': 1.1.0(openai@6.9.1(ws@8.18.3)(zod@3.25.76))
+      '@langchain/langgraph': 1.0.2(@langchain/core@1.1.0(openai@6.9.1(ws@8.18.3)(zod@3.25.76)))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(zod-to-json-schema@3.24.6(zod@3.25.76))(zod@3.25.76)
+      zod: 3.25.76
 
   '@langchain/langgraph-ui@1.0.4':
     dependencies:
