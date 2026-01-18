@@ -9,7 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.5",
+    "@modelcontextprotocol/sdk": "^1.25.2",
     "amadeus": "^8.0.0",
     "dotenv": "^16.4.7",
     "mcp-handler": "^1.0.2",
