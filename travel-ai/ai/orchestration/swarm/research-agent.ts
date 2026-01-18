@@ -5,13 +5,13 @@
  * and providing recommendations. First point of contact in the swarm.
  */
 
-import { ChatAnthropic } from "@langchain/anthropic";
-import { createReactAgent } from "@langchain/langgraph/prebuilt";
-import { createHandoffTool } from "@langchain/langgraph-swarm";
-import { DynamicStructuredTool } from "@langchain/core/tools";
-import { z } from "zod";
-import { config } from "../../../config";
-import { getMcpTools } from "../../tools/mcp-client";
+import { ChatAnthropic } from '@langchain/anthropic'
+import { createReactAgent } from '@langchain/langgraph/prebuilt'
+import { createHandoffTool } from '@langchain/langgraph-swarm'
+import { DynamicStructuredTool } from '@langchain/core/tools'
+import { z } from 'zod'
+import { config } from '../../../config'
+import { getMcpTools } from '../../tools/mcp-client'
 
 const RESEARCH_AGENT_PROMPT = `You are the Research Agent, the primary contact for travelers seeking information.
 
@@ -31,55 +31,57 @@ When to hand off:
 - "Create an itinerary" → PlanningAgent
 - "Reserve this hotel" → BookingAgent
 
-Always be helpful and proactive in suggesting options.`;
+Always be helpful and proactive in suggesting options.`
 
 /**
  * Create the Research Agent with handoff capabilities
  */
 export async function createResearchAgent() {
-    const model = new ChatAnthropic({
-        apiKey: config.anthropic_api_key,
-        model: config.model_name,
-        temperature: 0.4,
-    });
+  const model = new ChatAnthropic({
+    apiKey: config.anthropic_api_key,
+    model: config.model_name,
+    temperature: 0.4,
+  })
 
-    // Get all MCP tools for research
-    const mcpTools = await getMcpTools();
+  // Get all MCP tools for research
+  const mcpTools = await getMcpTools()
 
-    // Create handoff tools
-    const handoffToBooking = createHandoffTool({
-        agentName: "BookingAgent",
-        description: "Transfer to the Booking Agent when the user wants to make a reservation or book flights, hotels, or activities.",
-    });
+  // Create handoff tools
+  const handoffToBooking = createHandoffTool({
+    agentName: 'BookingAgent',
+    description:
+      'Transfer to the Booking Agent when the user wants to make a reservation or book flights, hotels, or activities.',
+  })
 
-    const handoffToPlanning = createHandoffTool({
-        agentName: "PlanningAgent",
-        description: "Transfer to the Planning Agent when the user needs help creating a trip itinerary or organizing their travel schedule.",
-    });
+  const handoffToPlanning = createHandoffTool({
+    agentName: 'PlanningAgent',
+    description:
+      'Transfer to the Planning Agent when the user needs help creating a trip itinerary or organizing their travel schedule.',
+  })
 
-    // Summary tool for tracking research findings
-    const saveResearchTool = new DynamicStructuredTool({
-        name: "save_research_findings",
-        description: "Save research findings for later reference by other agents",
-        schema: z.object({
-            category: z.enum(["flights", "hotels", "activities", "general"]),
-            findings: z.string().describe("Summary of research findings"),
-            recommendations: z.array(z.string()).describe("Top recommendations"),
-        }),
-        func: async (input) => {
-            console.log("[ResearchAgent] Saving findings:", input.category);
-            return JSON.stringify({ saved: true, ...input });
-        },
-    });
+  // Summary tool for tracking research findings
+  const saveResearchTool = new DynamicStructuredTool({
+    name: 'save_research_findings',
+    description: 'Save research findings for later reference by other agents',
+    schema: z.object({
+      category: z.enum(['flights', 'hotels', 'activities', 'general']),
+      findings: z.string().describe('Summary of research findings'),
+      recommendations: z.array(z.string()).describe('Top recommendations'),
+    }),
+    func: async (input) => {
+      console.log('[ResearchAgent] Saving findings:', input.category)
+      return JSON.stringify({ saved: true, ...input })
+    },
+  })
 
-    const agent = createReactAgent({
-        llm: model,
-        tools: [...mcpTools, handoffToBooking, handoffToPlanning, saveResearchTool],
-        messageModifier: RESEARCH_AGENT_PROMPT,
-        name: "ResearchAgent",
-    });
+  const agent = createReactAgent({
+    llm: model,
+    tools: [...mcpTools, handoffToBooking, handoffToPlanning, saveResearchTool],
+    messageModifier: RESEARCH_AGENT_PROMPT,
+    name: 'ResearchAgent',
+  })
 
-    return agent;
+  return agent
 }
 
-export type ResearchAgent = Awaited<ReturnType<typeof createResearchAgent>>;
+export type ResearchAgent = Awaited<ReturnType<typeof createResearchAgent>>
