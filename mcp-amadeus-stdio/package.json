@@ -1,0 +1,27 @@
+{
+  "name": "mcp-amadeus-stdio",
+  "version": "1.0.0",
+  "description": "MCP STDIO server for Amadeus Travel API - Chapter 8",
+  "type": "module",
+  "bin": {
+    "mcp-amadeus": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "inspect": "npx @modelcontextprotocol/inspector tsx src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.5",
+    "amadeus": "^8.0.0",
+    "docx": "^9.6.1",
+    "dotenv": "^16.4.7",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "tsx": "^4.19.0",
+    "typescript": "^5"
+  }
+}

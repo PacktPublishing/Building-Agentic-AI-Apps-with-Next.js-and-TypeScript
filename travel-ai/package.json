@@ -17,6 +17,7 @@
     "test:supabase:manual": "tsx scripts/test-supabase-agent.ts",
     "test:context": "tsx scripts/test-context-optimization.ts",
     "test:compare": "tsx scripts/compare-optimization.ts",
+    "test:orchestration": "tsx scripts/compare-orchestration.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit migrate",
     "db:push": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit push",
