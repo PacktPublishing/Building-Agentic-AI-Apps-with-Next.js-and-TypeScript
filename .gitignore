@@ -54,6 +54,5 @@ Thumbs.db
 *.tsbuildinfo
 
 # Package manager lockfiles (use root lockfile only)
-*/pnpm-lock.yaml
 */yarn.lock
 */package-lock.json
