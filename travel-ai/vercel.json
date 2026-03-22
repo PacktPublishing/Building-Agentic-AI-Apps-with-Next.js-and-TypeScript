@@ -1,7 +1,1 @@
-{
-  "buildCommand": "pnpm build",
-  "devCommand": "pnpm dev",
-  "installCommand": "pnpm install",
-  "framework": "nextjs",
-  "regions": ["iad1"]
-}
+{ "build": { "env": { "NODE_VERSION": "20" } } }
