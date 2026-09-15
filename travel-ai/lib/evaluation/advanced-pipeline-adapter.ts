@@ -23,9 +23,13 @@ export class AdvancedPipelineEvaluationAdapter implements IHybridSearchService {
   }
 
   async rebuildIndex(): Promise<void> {
-    // The pipeline's configured hybrid service owns index lifecycle.
+    await this.pipeline.getHybridSearchService().rebuildIndex();
   }
 
-  addToIndex(): void {}
-  removeFromIndex(): void {}
+  addToIndex(id: string, text: string, payload: Record<string, unknown>): void {
+    this.pipeline.getHybridSearchService().addToIndex(id, text, payload);
+  }
+  removeFromIndex(id: string): void {
+    this.pipeline.getHybridSearchService().removeFromIndex(id);
+  }
 }

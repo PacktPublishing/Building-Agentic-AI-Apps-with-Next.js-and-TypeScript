@@ -320,4 +320,8 @@ export class AdvancedRAGPipeline {
   getConfig(): Required<AdvancedRAGPipelineConfig> {
     return { ...this.config };
   }
+
+  getHybridSearchService(): IHybridSearchService {
+    return this.hybridSearch;
+  }
 }
