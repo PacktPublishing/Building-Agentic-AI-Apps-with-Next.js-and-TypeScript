@@ -85,13 +85,13 @@ export async function fetchAllTrips(): Promise<TripRecord[]> {
 
     for (const point of result.points) {
       allTrips.push({
-        id: point.id as string,
+        id: String(point.id),
         payload: point.payload as unknown as TripVectorPayload,
       });
     }
 
     if (!result.next_page_offset) break;
-    offset = result.next_page_offset;
+    offset = typeof result.next_page_offset === 'string' || typeof result.next_page_offset === 'number' ? result.next_page_offset : null;
   }
 
   return allTrips;
