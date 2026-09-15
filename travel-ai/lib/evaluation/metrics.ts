@@ -82,9 +82,10 @@ export function recallAtK(
  */
 export function meanReciprocalRank(
   results: EvalRetrievalResult[],
-  relevantIds: Set<string>
+  relevantIds: Set<string>,
+  k: number = results.length
 ): number {
-  for (let i = 0; i < results.length; i++) {
+  for (let i = 0; i < Math.min(k, results.length); i++) {
     if (relevantIds.has(results[i].id)) {
       return 1 / (i + 1);
     }
@@ -156,7 +157,7 @@ export function calculateRetrievalMetrics(
   return {
     precisionAtK: precisionAtK(results, relevantIds, k),
     recallAtK: recallAtK(results, relevantIds, k),
-    mrr: meanReciprocalRank(results, relevantIds),
+    mrr: meanReciprocalRank(results, relevantIds, k),
     ndcg: ndcg(results, relevantIds, k),
     hitRate: hitRate(results, relevantIds, k),
     k,

@@ -27,6 +27,8 @@ const kArg = args.find((arg) => arg.startsWith('--k='));
 const categoryArg = args.find((arg) => arg.startsWith('--category='));
 const difficultyArg = args.find((arg) => arg.startsWith('--difficulty='));
 const verboseArg = args.includes('--verbose');
+const minHitArg = args.find((arg) => arg.startsWith('--min-hit-rate='));
+const minMrrArg = args.find((arg) => arg.startsWith('--min-mrr='));
 
 const k = kArg ? parseInt(kArg.split('=')[1], 10) : 5;
 const category = categoryArg ? categoryArg.split('=')[1] : undefined;
@@ -61,7 +63,7 @@ async function main() {
   }
 
   if (difficulty) {
-    testQueries = getQueriesByDifficulty(difficulty as any);
+    testQueries = testQueries.filter((q) => q.difficulty === difficulty);
     console.log(`📋 Filtering by difficulty: ${difficulty}`);
   }
 
@@ -99,6 +101,13 @@ async function main() {
       console.log('✅ Precision is good - results are mostly relevant');
     } else {
       console.log('⚠️  Precision is low - consider better filtering');
+    }
+
+    const minHit = minHitArg ? Number(minHitArg.split('=')[1]) : undefined;
+    const minMrr = minMrrArg ? Number(minMrrArg.split('=')[1]) : undefined;
+    if ((minHit !== undefined && agg.hitRate < minHit) || (minMrr !== undefined && agg.mrr < minMrr)) {
+      console.error('❌ Evaluation regression threshold failed');
+      process.exitCode = 2;
     }
 
     console.log('\n💡 Tips for improvement:');

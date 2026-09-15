@@ -39,6 +39,9 @@ export interface SelfQueryResult {
   confidence: number;
   /** Original query for reference */
   originalQuery: string;
+  /** False when the structured request could not be safely validated. */
+  valid?: boolean;
+  error?: string;
 }
 
 /**
@@ -107,11 +110,14 @@ export class SelfQueryParser {
       const parsed = this.parseJsonResponse(content);
 
       const result: SelfQueryResult = {
-        semanticQuery: parsed.semanticQuery || query,
+        semanticQuery: typeof parsed.semanticQuery === 'string' ? parsed.semanticQuery.trim() : '',
         filters: this.validateFilters(parsed.filters || {}),
-        confidence: parsed.confidence ?? 0.8,
+        confidence: typeof parsed.confidence === 'number' && Number.isFinite(parsed.confidence)
+          ? Math.max(0, Math.min(1, parsed.confidence)) : 0,
         originalQuery: query,
+        valid: true,
       };
+      if (!result.semanticQuery) throw new Error('Self-query response has no semantic query');
 
       // Cache result
       if (this.useCache) {
@@ -122,12 +128,15 @@ export class SelfQueryParser {
       return result;
     } catch (error) {
       console.error('❌ SelfQueryParser: Parse failed', error);
-      // Return original query with no filters on failure
+      // Fail closed: constrained requests must not silently broaden to an
+      // unrestricted search after malformed model output or provider failure.
       return {
-        semanticQuery: query,
+        semanticQuery: '',
         filters: {},
         confidence: 0,
         originalQuery: query,
+        valid: false,
+        error: 'Unable to validate search constraints',
       };
     }
   }
@@ -164,11 +173,11 @@ export class SelfQueryParser {
       validated.destination = filters.destination.trim();
     }
 
-    if (filters.budget_min && typeof filters.budget_min === 'number' && filters.budget_min > 0) {
+    if (typeof filters.budget_min === 'number' && Number.isFinite(filters.budget_min) && filters.budget_min >= 0) {
       validated.budget_min = filters.budget_min;
     }
 
-    if (filters.budget_max && typeof filters.budget_max === 'number' && filters.budget_max > 0) {
+    if (typeof filters.budget_max === 'number' && Number.isFinite(filters.budget_max) && filters.budget_max >= 0) {
       validated.budget_max = filters.budget_max;
     }
 
@@ -195,11 +204,18 @@ export class SelfQueryParser {
       validated.max_duration = filters.max_duration;
     }
 
+    if (validated.budget_min !== undefined && validated.budget_max !== undefined && validated.budget_min > validated.budget_max) {
+      throw new Error('Invalid budget range');
+    }
+    if (validated.min_duration !== undefined && validated.max_duration !== undefined && validated.min_duration > validated.max_duration) {
+      throw new Error('Invalid duration range');
+    }
+
     if (filters.departure_city && typeof filters.departure_city === 'string') {
       validated.departure_city = filters.departure_city.trim();
     }
 
-    if (filters.num_people && typeof filters.num_people === 'number' && filters.num_people > 0) {
+    if (typeof filters.num_people === 'number' && Number.isInteger(filters.num_people) && filters.num_people > 0) {
       validated.num_people = filters.num_people;
     }
 

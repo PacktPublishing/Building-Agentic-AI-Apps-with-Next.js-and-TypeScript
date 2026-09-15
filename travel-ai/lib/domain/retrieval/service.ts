@@ -11,7 +11,9 @@ import type { VectorSearchResult } from '../vector/repository';
  */
 export interface SemanticSearchQuery {
   query: string;
-  userId?: string; // Optional - if not provided, search all trips
+  userId?: string;
+  /** Private is the safe default; public must be explicitly requested. */
+  scope?: 'private' | 'public';
   filters?: {
     destination?: string;
     budgetCategory?: 'economy' | 'standard' | 'premium';

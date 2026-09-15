@@ -33,9 +33,10 @@ export function calculateRRFScore(ranks: number[], k: number = DEFAULT_K): numbe
  */
 export function fuseWithRRF(
   rankedLists: RankedItem[][],
-  config: Partial<RRFConfig> = {}
+  config: Partial<RRFConfig> & { alpha?: number } = {}
 ): HybridSearchResult[] {
   const k = config.k ?? DEFAULT_K;
+  const alpha = Math.max(0, Math.min(1, config.alpha ?? 0.5));
 
   // Map to accumulate scores and track appearances
   const scoreMap = new Map<
@@ -56,7 +57,7 @@ export function fuseWithRRF(
 
       if (existing) {
         // Add to existing RRF score
-        existing.rrfScore += 1 / (k + item.rank);
+        existing.rrfScore += (item.source === 'semantic' ? alpha : 1 - alpha) / (k + item.rank);
         existing.appearances += 1;
 
         // Update source-specific scores
@@ -68,7 +69,7 @@ export function fuseWithRRF(
       } else {
         // First appearance
         scoreMap.set(item.id, {
-          rrfScore: 1 / (k + item.rank),
+          rrfScore: (item.source === 'semantic' ? alpha : 1 - alpha) / (k + item.rank),
           semanticScore: item.source === 'semantic' ? item.score : 0,
           lexicalScore: item.source === 'lexical' ? item.score : 0,
           payload: item.payload,

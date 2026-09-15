@@ -32,9 +32,15 @@ export interface TripVectorPayload extends Record<string, unknown> {
  * Search filter for vector search
  */
 export interface VectorSearchFilter {
-  user_id?: string; // Optional - if not provided, search all trips
+  user_id?: string;
   destination?: string;
   budget_category?: 'economy' | 'standard' | 'premium';
+  budget_min?: number;
+  budget_max?: number;
+  min_duration?: number;
+  max_duration?: number;
+  departure_city?: string;
+  num_people?: number;
 }
 
 /**
@@ -78,6 +84,9 @@ export interface IVectorRepository {
     filter: VectorSearchFilter,
     limit?: number
   ): Promise<VectorSearchResult[]>;
+
+  /** Return a complete corpus snapshot for secondary-index rebuilds. */
+  listAll?(): Promise<VectorSearchResult[]>;
 
   /**
    * Delete trip vector

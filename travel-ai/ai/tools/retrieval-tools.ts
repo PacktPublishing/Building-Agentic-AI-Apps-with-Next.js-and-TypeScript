@@ -30,17 +30,19 @@ export const searchTripsTool = new DynamicStructuredTool({
     description: "Search through all saved trips using natural language. Use this to find trip inspiration, discover destinations, or find trips matching specific criteria. Searches across ALL trips in the database for maximum discovery.",
     schema: z.object({
         query: z.string().describe("Natural language search query (e.g., 'beach vacation in Europe', 'budget trip to Asia', 'week-long city break', 'romantic getaway')"),
+        scope: z.enum(['private', 'public']).default('private').describe('Search scope. Private requires a verified userId; public is reserved for the explicit public catalogue.'),
         userId: z.string().optional().describe("Optional: filter to only this user's trips"),
         destination: z.string().optional().describe("Optional: filter by specific destination (IATA code like 'CDG', 'DUB')"),
         budgetCategory: z.enum(['economy', 'standard', 'premium']).optional().describe("Optional: filter by budget category"),
         limit: z.number().optional().default(5).describe("Maximum number of results to return (default: 5)"),
     }),
-    func: async ({ query, userId, destination, budgetCategory, limit }) => {
+    func: async ({ query, userId, scope, destination, budgetCategory, limit }) => {
         try {
             const searchUseCase = getSearchTripsUseCase();
             const results = await searchUseCase.searchTrips({
                 query,
                 userId,
+                scope,
                 filters: { destination, budgetCategory },
                 limit,
             });
@@ -63,7 +65,7 @@ export const searchTripsTool = new DynamicStructuredTool({
         } catch (error) {
             return JSON.stringify({
                 success: false,
-                error: error instanceof Error ? error.message : 'Search failed',
+                error: 'Search failed',
             });
         }
     }
@@ -103,7 +105,7 @@ export const findSimilarTripsTool = new DynamicStructuredTool({
         } catch (error) {
             return JSON.stringify({
                 success: false,
-                error: error instanceof Error ? error.message : 'Failed to find similar trips',
+                error: 'Unable to find similar trips',
             });
         }
     }

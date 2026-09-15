@@ -113,8 +113,9 @@ export function findRelevantTrips(
     matchesRelevanceRules(trip, testQuery.relevanceRules!)
   );
 
-  // Return up to 10 relevant trip IDs
-  return matchingTrips.slice(0, 10).map((t) => t.id);
+  // Keep the complete reviewed/derived positive set. Truncating labels makes
+  // recall and NDCG depend on arbitrary corpus order.
+  return matchingTrips.map((t) => t.id);
 }
 
 /**
