@@ -69,7 +69,7 @@ export class HyDEGenerator {
     hydeConfig: HyDEGeneratorConfig = {}
   ) {
     this.llm = new ChatAnthropic({
-      modelName: hydeConfig.model || 'claude-3-haiku-20240307',
+      modelName: hydeConfig.model || config.model_name,
       temperature: hydeConfig.temperature ?? 0.7,
       anthropicApiKey: config.anthropic_api_key,
     });

@@ -85,7 +85,7 @@ export class ContextualChunker {
 
   constructor(chunkerConfig: ContextualChunkerConfig = {}) {
     this.llm = new ChatAnthropic({
-      modelName: chunkerConfig.model || 'claude-3-haiku-20240307',
+      modelName: chunkerConfig.model || config.model_name,
       temperature: 0,
       anthropicApiKey: config.anthropic_api_key,
     });

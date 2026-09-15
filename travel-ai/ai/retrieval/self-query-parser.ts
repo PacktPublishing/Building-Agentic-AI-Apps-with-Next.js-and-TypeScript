@@ -70,7 +70,7 @@ export class SelfQueryParser {
 
   constructor(parserConfig: SelfQueryParserConfig = {}) {
     this.llm = new ChatAnthropic({
-      modelName: parserConfig.model || 'claude-3-haiku-20240307',
+      modelName: parserConfig.model || config.model_name,
       temperature: parserConfig.temperature ?? 0,
       anthropicApiKey: config.anthropic_api_key,
     });

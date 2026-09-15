@@ -57,7 +57,7 @@ export class QueryRewriter {
 
   constructor(rewriterConfig: QueryRewriterConfig = {}) {
     this.llm = new ChatAnthropic({
-      modelName: rewriterConfig.model || 'claude-3-haiku-20240307',
+      modelName: rewriterConfig.model || config.model_name,
       temperature: 0.3, // Slight creativity for expansion
       anthropicApiKey: config.anthropic_api_key,
     });

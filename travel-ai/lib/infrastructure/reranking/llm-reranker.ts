@@ -59,7 +59,7 @@ export class LLMReranker implements IRerankerService {
 
   constructor(llmConfig: LLMRerankerConfig = {}) {
     this.llm = new ChatAnthropic({
-      modelName: llmConfig.model || 'claude-3-haiku-20240307',
+      modelName: llmConfig.model || config.model_name,
       temperature: 0,
       anthropicApiKey: config.anthropic_api_key,
     });
