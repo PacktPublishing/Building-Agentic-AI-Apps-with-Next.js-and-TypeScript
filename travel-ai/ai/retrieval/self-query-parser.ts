@@ -182,7 +182,9 @@ export class SelfQueryParser {
     for (const key of ['min_duration', 'max_duration']) {
       const value = (filters as Record<string, unknown>)[key];
       if (value !== undefined && !Number.isInteger(value)) throw new Error(`Duration must be an integer: ${key}`);
+      if (typeof value === 'number' && value < 0) throw new Error(`Duration cannot be negative: ${key}`);
     }
+    if (filters.num_people !== undefined && (typeof filters.num_people !== 'number' || !Number.isInteger(filters.num_people) || filters.num_people <= 0)) throw new Error('Invalid party size');
 
     if (filters.destination !== undefined && typeof filters.destination !== 'string') throw new Error('Invalid destination constraint');
     if (filters.destination) {
@@ -205,19 +207,11 @@ export class SelfQueryParser {
       validated.budget_category = filters.budget_category;
     }
 
-    if (
-      filters.min_duration &&
-      typeof filters.min_duration === 'number' &&
-      filters.min_duration > 0
-    ) {
+    if (filters.min_duration !== undefined && filters.min_duration > 0) {
       validated.min_duration = filters.min_duration;
     }
 
-    if (
-      filters.max_duration &&
-      typeof filters.max_duration === 'number' &&
-      filters.max_duration > 0
-    ) {
+    if (filters.max_duration !== undefined && filters.max_duration > 0) {
       validated.max_duration = filters.max_duration;
     }
 
@@ -245,10 +239,18 @@ export class SelfQueryParser {
   toVectorSearchFilter(filters: ExtractedFilters): {
     destination?: string;
     budget_category?: 'economy' | 'standard' | 'premium';
+    budget_min?: number; budget_max?: number; min_duration?: number; max_duration?: number;
+    departure_city?: string; num_people?: number;
   } {
     return {
       destination: filters.destination,
       budget_category: filters.budget_category,
+      budget_min: filters.budget_min,
+      budget_max: filters.budget_max,
+      min_duration: filters.min_duration,
+      max_duration: filters.max_duration,
+      departure_city: filters.departure_city,
+      num_people: filters.num_people,
     };
   }
 

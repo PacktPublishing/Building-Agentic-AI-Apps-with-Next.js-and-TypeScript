@@ -45,6 +45,10 @@ export class SearchTripsUseCase implements IRetrievalService {
         budget_category: query.filters?.budgetCategory,
         budget_min: query.filters?.minBudget,
         budget_max: query.filters?.maxBudget,
+        min_duration: query.filters?.minDuration,
+        max_duration: query.filters?.maxDuration,
+        departure_city: query.filters?.departureCity,
+        num_people: query.filters?.numPeople,
       };
 
       // Step 3: Search Qdrant

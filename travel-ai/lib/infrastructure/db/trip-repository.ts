@@ -9,6 +9,8 @@ import { eq, and, sql } from 'drizzle-orm';
 import type { ITripRepository, SaveTripData, SavedTrip } from '@/lib/domain/trip/repository';
 import { calculateReturnDate } from '@/ai/workflow/trip-planner-state';
 
+type DbExecutor = Pick<typeof db, 'select' | 'insert'>;
+
 export class DrizzleTripRepository implements ITripRepository {
   async enqueueIndexing(tripId: string, operation: 'upsert' | 'delete' = 'upsert'): Promise<void> {
     await db.insert(tripIndexJobs).values({ tripId, operation, status: 'pending' })
@@ -17,7 +19,7 @@ export class DrizzleTripRepository implements ITripRepository {
   /**
    * Ensure user exists in local DB (sync from Supabase Auth)
    */
-  private async ensureUserExists(database: any, userId: string): Promise<void> {
+  private async ensureUserExists(database: DbExecutor, userId: string): Promise<void> {
     const existingUser = await database
       .select()
       .from(users)
@@ -52,7 +54,7 @@ export class DrizzleTripRepository implements ITripRepository {
     try {
       const newTrip = await db.transaction(async (tx) => {
         // Trip and outbox row commit or roll back together.
-        await this.ensureUserExists(tx, userId);
+        await this.ensureUserExists(tx as unknown as DbExecutor, userId);
         const [inserted] = await tx.insert(trips).values({
           userId,
           title: title || `Trip to ${formInput.arrivalCity}`,

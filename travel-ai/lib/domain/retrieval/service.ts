@@ -19,6 +19,10 @@ export interface SemanticSearchQuery {
     budgetCategory?: 'economy' | 'standard' | 'premium';
     minBudget?: number;
     maxBudget?: number;
+    minDuration?: number;
+    maxDuration?: number;
+    departureCity?: string;
+    numPeople?: number;
   };
   limit?: number;
 }
