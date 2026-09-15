@@ -678,3 +678,8 @@ ground-truth judgment set. Reports must label them as heuristic, retain all
 matching positives, and keep the dataset/corpus version alongside results.
 Retrieval metrics (precision, recall, MRR, NDCG and hit rate) are separate from
 the optional paid LLM-as-judge generation scores.
+
+For latency comparisons, use `benchmarkRetrieval` with the same fixed query set
+and report the selected configuration and result counts. Timing is local
+diagnostic evidence only; provider cost and quality require separately budgeted
+live evaluation.
