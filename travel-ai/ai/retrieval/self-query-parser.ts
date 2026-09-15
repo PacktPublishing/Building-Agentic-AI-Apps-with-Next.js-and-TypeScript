@@ -167,9 +167,22 @@ export class SelfQueryParser {
    * Validate and clean extracted filters
    */
   private validateFilters(filters: Partial<ExtractedFilters>): ExtractedFilters {
+    const supported = new Set(['destination', 'budget_min', 'budget_max', 'budget_category', 'min_duration', 'max_duration', 'departure_city', 'num_people']);
+    for (const key of Object.keys(filters)) {
+      if (!supported.has(key)) throw new Error(`Unsupported search constraint: ${key}`);
+    }
     const validated: ExtractedFilters = {};
+    for (const key of ['budget_min', 'budget_max', 'min_duration', 'max_duration']) {
+      const value = (filters as Record<string, unknown>)[key];
+      if (value !== undefined && (typeof value !== 'number' || !Number.isFinite(value))) throw new Error(`Invalid numeric constraint: ${key}`);
+    }
+    for (const key of ['min_duration', 'max_duration']) {
+      const value = (filters as Record<string, unknown>)[key];
+      if (value !== undefined && !Number.isInteger(value)) throw new Error(`Duration must be an integer: ${key}`);
+    }
 
-    if (filters.destination && typeof filters.destination === 'string') {
+    if (filters.destination !== undefined && typeof filters.destination !== 'string') throw new Error('Invalid destination constraint');
+    if (filters.destination) {
       validated.destination = filters.destination.trim();
     }
 
@@ -181,6 +194,7 @@ export class SelfQueryParser {
       validated.budget_max = filters.budget_max;
     }
 
+    if (filters.budget_category !== undefined && !['economy', 'standard', 'premium'].includes(filters.budget_category as string)) throw new Error('Invalid budget category');
     if (
       filters.budget_category &&
       ['economy', 'standard', 'premium'].includes(filters.budget_category)
