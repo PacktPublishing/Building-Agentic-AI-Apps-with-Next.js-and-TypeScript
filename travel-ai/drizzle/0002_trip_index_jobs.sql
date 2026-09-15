@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS "trip_index_jobs" (
   "operation" text NOT NULL DEFAULT 'upsert',
   "status" text NOT NULL DEFAULT 'pending',
   "attempts" integer NOT NULL DEFAULT 0,
+  "version" integer NOT NULL DEFAULT 1,
   "last_error" text,
   "available_at" timestamp NOT NULL DEFAULT now(),
   "created_at" timestamp NOT NULL DEFAULT now(),

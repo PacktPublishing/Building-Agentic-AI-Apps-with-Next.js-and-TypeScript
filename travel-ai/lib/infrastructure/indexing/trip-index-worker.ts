@@ -5,6 +5,7 @@ export interface IndexJob {
   tripId: string;
   operation: IndexOperation;
   attempts: number;
+  version: number;
   availableAt: Date;
 }
 
@@ -16,8 +17,8 @@ export interface IndexJobStore {
 }
 
 export interface TripIndexer {
-  upsert(tripId: string): Promise<void>;
-  delete(tripId: string): Promise<void>;
+  upsert(tripId: string, version: number): Promise<void>;
+  delete(tripId: string, version: number): Promise<void>;
 }
 
 import { db, tripIndexJobs } from '@/lib/db';
@@ -33,7 +34,7 @@ export class DrizzleIndexJobStore implements IndexJobStore {
       if (rows.length) await tx.update(tripIndexJobs)
         .set({ status: 'processing', updatedAt: now })
         .where(inArray(tripIndexJobs.id, rows.map((row) => row.id)));
-      return rows.map((row) => ({ id: row.id, tripId: row.tripId, operation: row.operation as IndexOperation, attempts: row.attempts, availableAt: row.availableAt }));
+      return rows.map((row) => ({ id: row.id, tripId: row.tripId, operation: row.operation as IndexOperation, attempts: row.attempts, version: row.version, availableAt: row.availableAt }));
     });
   }
 
@@ -64,8 +65,8 @@ export class TripIndexWorker {
     let failed = 0;
     for (const job of claimed) {
       try {
-        if (job.operation === 'delete') await this.indexer.delete(job.tripId);
-        else await this.indexer.upsert(job.tripId);
+        if (job.operation === 'delete') await this.indexer.delete(job.tripId, job.version);
+        else await this.indexer.upsert(job.tripId, job.version);
         await this.jobs.complete(job.id);
         processed++;
       } catch (error) {

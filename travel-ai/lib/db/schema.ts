@@ -36,6 +36,7 @@ export const tripIndexJobs = pgTable("trip_index_jobs", {
   operation: text("operation").notNull().default("upsert"),
   status: text("status").notNull().default("pending"),
   attempts: integer("attempts").notNull().default(0),
+  version: integer("version").notNull().default(1),
   lastError: text("last_error"),
   availableAt: timestamp("available_at").defaultNow().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
