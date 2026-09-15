@@ -4,12 +4,16 @@
  * Implements ITripRepository using Drizzle ORM
  */
 
-import { db, trips, users } from '@/lib/db';
+import { db, trips, users, tripIndexJobs } from '@/lib/db';
 import { eq, and } from 'drizzle-orm';
 import type { ITripRepository, SaveTripData, SavedTrip } from '@/lib/domain/trip/repository';
 import { calculateReturnDate } from '@/ai/workflow/trip-planner-state';
 
 export class DrizzleTripRepository implements ITripRepository {
+  async enqueueIndexing(tripId: string, operation: 'upsert' | 'delete' = 'upsert'): Promise<void> {
+    await db.insert(tripIndexJobs).values({ tripId, operation, status: 'pending' })
+      .onConflictDoUpdate({ target: tripIndexJobs.tripId, set: { operation, status: 'pending', updatedAt: new Date() } });
+  }
   /**
    * Ensure user exists in local DB (sync from Supabase Auth)
    */

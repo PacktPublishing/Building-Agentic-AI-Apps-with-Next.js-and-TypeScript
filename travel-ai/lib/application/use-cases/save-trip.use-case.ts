@@ -33,6 +33,8 @@ export class SaveTripUseCase {
       // Step 1: Save to PostgreSQL (source of truth)
       console.log('1️⃣ Saving to PostgreSQL...');
       const savedTrip = await this.tripRepository.save(data);
+      // Keep a durable pending job even when embedding/Qdrant is unavailable.
+      await this.tripRepository.enqueueIndexing?.(savedTrip.id, 'upsert');
 
       // Step 2: Generate summary text for embedding
       console.log('2️⃣ Generating summary text...');

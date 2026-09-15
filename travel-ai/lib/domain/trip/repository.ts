@@ -56,6 +56,9 @@ export interface ITripRepository {
    */
   save(data: SaveTripData): Promise<SavedTrip>;
 
+  /** Durable outbox entry for vector indexing. */
+  enqueueIndexing?(tripId: string, operation?: 'upsert' | 'delete'): Promise<void>;
+
   /**
    * Find trip by ID
    */
