@@ -179,6 +179,10 @@ export class SelfQueryParser {
       const value = (filters as Record<string, unknown>)[key];
       if (value !== undefined && (typeof value !== 'number' || !Number.isFinite(value))) throw new Error(`Invalid numeric constraint: ${key}`);
     }
+    for (const key of ['budget_min', 'budget_max']) {
+      const value = (filters as Record<string, unknown>)[key];
+      if (typeof value === 'number' && value < 0) throw new Error(`Budget cannot be negative: ${key}`);
+    }
     for (const key of ['min_duration', 'max_duration']) {
       const value = (filters as Record<string, unknown>)[key];
       if (value !== undefined && !Number.isInteger(value)) throw new Error(`Duration must be an integer: ${key}`);

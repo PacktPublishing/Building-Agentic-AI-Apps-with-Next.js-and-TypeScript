@@ -13,7 +13,7 @@ export interface IndexJob {
 export interface IndexJobStore {
   claim(limit: number, now: Date): Promise<IndexJob[]>;
   isCurrent?(tripId: string, version: number): Promise<boolean>;
-  complete(id: string): Promise<void>;
+  complete(id: string, version?: number): Promise<void>;
   fail(id: string, error: string, nextAttemptAt: Date): Promise<void>;
 }
 
@@ -35,18 +35,25 @@ export class DrizzleIndexJobStore implements IndexJobStore {
 
   async claim(limit: number, now: Date): Promise<IndexJob[]> {
     return db.transaction(async (tx) => {
+      const reclaimBefore = new Date(now.getTime() - 5 * 60_000);
       const rows = await tx.select().from(tripIndexJobs)
-        .where(and(inArray(tripIndexJobs.status, ['pending', 'failed']), lte(tripIndexJobs.availableAt, now)))
+        .where(and(
+          or(
+            and(inArray(tripIndexJobs.status, ['pending', 'failed']), lte(tripIndexJobs.availableAt, now)),
+            and(eq(tripIndexJobs.status, 'processing'), lte(tripIndexJobs.updatedAt, reclaimBefore)),
+          ),
+        ))
         .limit(limit);
       if (rows.length) await tx.update(tripIndexJobs)
-        .set({ status: 'processing', updatedAt: now })
+        .set({ status: 'processing', claimedAt: now, updatedAt: now })
         .where(inArray(tripIndexJobs.id, rows.map((row) => row.id)));
       return rows.map((row) => ({ id: row.id, tripId: row.tripId, operation: row.operation as IndexOperation, attempts: row.attempts, version: row.version, availableAt: row.availableAt }));
     });
   }
 
-  async complete(id: string): Promise<void> {
-    await db.update(tripIndexJobs).set({ status: 'complete', updatedAt: new Date() }).where(eq(tripIndexJobs.id, id));
+  async complete(id: string, version?: number): Promise<void> {
+    await db.update(tripIndexJobs).set({ status: 'complete', updatedAt: new Date() })
+      .where(version === undefined ? eq(tripIndexJobs.id, id) : and(eq(tripIndexJobs.id, id), eq(tripIndexJobs.version, version)));
   }
 
   async fail(id: string, error: string, nextAttemptAt: Date): Promise<void> {
@@ -73,12 +80,12 @@ export class TripIndexWorker {
     for (const job of claimed) {
       try {
         if (this.jobs.isCurrent && !(await this.jobs.isCurrent(job.tripId, job.version))) {
-          await this.jobs.complete(job.id);
+          await this.jobs.complete(job.id, job.version);
           continue;
         }
         if (job.operation === 'delete') await this.indexer.delete(job.tripId, job.version);
         else await this.indexer.upsert(job.tripId, job.version);
-        await this.jobs.complete(job.id);
+        await this.jobs.complete(job.id, job.version);
         processed++;
       } catch (error) {
         failed++;

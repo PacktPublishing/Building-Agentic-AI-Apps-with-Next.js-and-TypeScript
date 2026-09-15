@@ -16,7 +16,7 @@ describe('private retrieval authorization', () => {
       upsert: async () => {}, delete: async () => {}, search: async () => [],
       getById: async () => ({ id: 't1', vector: [1], payload: payload('user-b') }),
     };
-    const useCase = new SearchTripsUseCase(repo, { generate: async () => [1] });
+    const useCase = new SearchTripsUseCase(repo, { generate: async () => [1], generateBatch: async () => [[1]] });
     await expect(useCase.findSimilarTrips('t1', 'user-a')).rejects.toThrow('Trip not found');
   });
 });
