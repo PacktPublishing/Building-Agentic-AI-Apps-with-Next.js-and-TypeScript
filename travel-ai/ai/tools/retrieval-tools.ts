@@ -6,27 +6,16 @@
 
 import { DynamicStructuredTool } from "@langchain/core/tools";
 import { z } from "zod";
-import { SearchTripsUseCase } from "@/lib/application/use-cases/search-trips.use-case";
-import { QdrantVectorRepository } from "@/lib/infrastructure/qdrant/vector-repository";
-import { OpenAIEmbeddingsService } from "@/lib/infrastructure/embeddings/openai-service";
-import { getVerifiedUserId } from "@/lib/supabase/server";
+import { getSearchTripsUseCase } from "@/lib/application/composition/retrieval";
+import { resolveRequestUser } from "@/lib/application/composition/auth";
 
 // Lazy initialization of the search use case
-let searchTripsUseCaseInstance: SearchTripsUseCase | null = null;
 
 export interface RetrievalAuthContext {
     userId: string;
     scope?: 'private' | 'public';
 }
 
-function getSearchTripsUseCase(): SearchTripsUseCase {
-    if (!searchTripsUseCaseInstance) {
-        const vectorRepository = new QdrantVectorRepository();
-        const embeddingsService = new OpenAIEmbeddingsService();
-        searchTripsUseCaseInstance = new SearchTripsUseCase(vectorRepository, embeddingsService);
-    }
-    return searchTripsUseCaseInstance;
-}
 
 /**
  * Semantic search tool - search trips using natural language
@@ -116,10 +105,7 @@ export function createSearchTripsToolFromSession(
 }
 
 export function createSearchTripsToolFromRequest(request: Request): DynamicStructuredTool {
-    return createSearchTripsToolFromSession(async () => {
-        const userId = await getVerifiedUserId(request);
-        return userId ? { userId, scope: 'private' as const } : null;
-    });
+    return createSearchTripsToolFromSession(() => resolveRequestUser(request));
 }
 
 /**
