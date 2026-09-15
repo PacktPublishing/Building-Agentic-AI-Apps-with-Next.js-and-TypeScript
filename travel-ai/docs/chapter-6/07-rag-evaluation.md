@@ -667,3 +667,14 @@ async function compareConfigurations() {
 6. **A/B test configurations** - compare different setups
 7. **Track over time** - regression testing
 
+## Reproducible evaluation contract
+
+Run `pnpm tsx scripts/evaluate-rag.ts --k=5`. Add `--min-hit-rate=0.8` or
+`--min-mrr=0.5` in CI to fail on a configured regression. `--category` and
+`--difficulty` are intersected when both are supplied.
+
+The bundled `relevanceRules` are heuristic diagnostics and are not a reviewed
+ground-truth judgment set. Reports must label them as heuristic, retain all
+matching positives, and keep the dataset/corpus version alongside results.
+Retrieval metrics (precision, recall, MRR, NDCG and hit rate) are separate from
+the optional paid LLM-as-judge generation scores.

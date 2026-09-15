@@ -68,6 +68,7 @@ async function main() {
   }
 
   console.log(`📋 Running evaluation on ${testQueries.length} queries (K=${k})\n`);
+  console.log('📚 Judgment mode: heuristic diagnostics from relevanceRules (not reviewed labels)');
 
   // Note: relevantTripIds are now populated automatically by the evaluator
   // based on relevanceRules defined in test-dataset.ts
