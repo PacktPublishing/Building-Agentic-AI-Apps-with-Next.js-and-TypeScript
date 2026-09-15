@@ -20,6 +20,33 @@ export interface TripIndexer {
   delete(tripId: string): Promise<void>;
 }
 
+import { db, tripIndexJobs } from '@/lib/db';
+import { and, eq, lte, or, inArray } from 'drizzle-orm';
+
+/** PostgreSQL implementation used by the scheduled worker process. */
+export class DrizzleIndexJobStore implements IndexJobStore {
+  async claim(limit: number, now: Date): Promise<IndexJob[]> {
+    return db.transaction(async (tx) => {
+      const rows = await tx.select().from(tripIndexJobs)
+        .where(and(inArray(tripIndexJobs.status, ['pending', 'failed']), lte(tripIndexJobs.availableAt, now)))
+        .limit(limit);
+      if (rows.length) await tx.update(tripIndexJobs)
+        .set({ status: 'processing', updatedAt: now })
+        .where(inArray(tripIndexJobs.id, rows.map((row) => row.id)));
+      return rows.map((row) => ({ id: row.id, tripId: row.tripId, operation: row.operation as IndexOperation, attempts: row.attempts, availableAt: row.availableAt }));
+    });
+  }
+
+  async complete(id: string): Promise<void> {
+    await db.update(tripIndexJobs).set({ status: 'complete', updatedAt: new Date() }).where(eq(tripIndexJobs.id, id));
+  }
+
+  async fail(id: string, error: string, nextAttemptAt: Date): Promise<void> {
+    const [job] = await db.select({ attempts: tripIndexJobs.attempts }).from(tripIndexJobs).where(eq(tripIndexJobs.id, id)).limit(1);
+    await db.update(tripIndexJobs).set({ status: 'failed', attempts: (job?.attempts ?? 0) + 1, lastError: error.slice(0, 1000), availableAt: nextAttemptAt, updatedAt: new Date() }).where(eq(tripIndexJobs.id, id));
+  }
+}
+
 /**
  * Restart-safe outbox consumer. A job is claimed before processing and only
  * marked complete after Qdrant succeeds; failed jobs remain durable.
