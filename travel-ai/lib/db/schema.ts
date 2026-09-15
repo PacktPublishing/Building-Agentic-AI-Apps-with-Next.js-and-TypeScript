@@ -30,6 +30,21 @@ export const trips = pgTable("trips", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const tripIndexJobs = pgTable("trip_index_jobs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  // Deliberately not an FK: delete jobs must survive the source trip deletion.
+  tripId: uuid("trip_id").notNull().unique(),
+  operation: text("operation").notNull().default("upsert"),
+  status: text("status").notNull().default("pending"),
+  attempts: integer("attempts").notNull().default(0),
+  version: integer("version").notNull().default(1),
+  lastError: text("last_error"),
+  availableAt: timestamp("available_at").defaultNow().notNull(),
+  claimedAt: timestamp("claimed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const activities = pgTable("activities", {
     id: uuid("id").defaultRandom().primaryKey(),
     tripId: uuid("trip_id").references(() => trips.id).notNull(),

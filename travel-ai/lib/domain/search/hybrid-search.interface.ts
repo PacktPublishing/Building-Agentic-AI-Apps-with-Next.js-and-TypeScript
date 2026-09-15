@@ -22,6 +22,9 @@ export interface IHybridSearchService {
    */
   search(query: string, options?: HybridSearchOptions): Promise<HybridSearchResult[]>;
 
+  /** Search using a caller-provided embedding (used by HyDE). */
+  searchWithVector?(query: string, vector: number[], options?: HybridSearchOptions): Promise<HybridSearchResult[]>;
+
   /**
    * Rebuild the BM25 index from current data
    * Should be called after significant data changes

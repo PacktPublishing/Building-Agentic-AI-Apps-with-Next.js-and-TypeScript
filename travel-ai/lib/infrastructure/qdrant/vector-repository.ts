@@ -121,7 +121,7 @@ export class QdrantVectorRepository implements IVectorRepository {
       if (filter.destination) {
         mustConditions.push({
           key: 'destination',
-          match: { value: filter.destination },
+          match: Array.isArray(filter.destination) ? { any: filter.destination } : { value: filter.destination },
         });
       }
 
@@ -131,6 +131,12 @@ export class QdrantVectorRepository implements IVectorRepository {
           match: { value: filter.budget_category },
         });
       }
+      if (filter.budget_min !== undefined) mustConditions.push({ key: 'total_budget', range: { gte: filter.budget_min } });
+      if (filter.budget_max !== undefined) mustConditions.push({ key: 'total_budget', range: { lte: filter.budget_max } });
+      if (filter.min_duration !== undefined) mustConditions.push({ key: 'stay_duration', range: { gte: filter.min_duration } });
+      if (filter.max_duration !== undefined) mustConditions.push({ key: 'stay_duration', range: { lte: filter.max_duration } });
+      if (filter.departure_city) mustConditions.push({ key: 'departure_city', match: { value: filter.departure_city } });
+      if (filter.num_people !== undefined) mustConditions.push({ key: 'num_people', match: { value: filter.num_people } });
 
       // Only include filter if there are conditions
       const searchParams: any = {
@@ -153,6 +159,27 @@ export class QdrantVectorRepository implements IVectorRepository {
       console.error('❌ Failed to search Qdrant:', error);
       throw new Error(`Failed to search trip vectors: ${error}`);
     }
+  }
+
+  async listAll(): Promise<VectorSearchResult[]> {
+    await this.ensureCollection();
+    const all: VectorSearchResult[] = [];
+    let offset: string | number | undefined;
+    do {
+      const page = await this.client.scroll(QDRANT_COLLECTIONS.USER_TRIPS, {
+        limit: 100,
+        offset,
+        with_payload: true,
+        with_vector: false,
+      });
+      all.push(...page.points.map((point) => ({
+        id: point.id as string,
+        score: 0,
+        payload: point.payload as TripVectorPayload,
+      })));
+      offset = page.next_page_offset as string | number | undefined;
+    } while (offset !== undefined);
+    return all;
   }
 
   async delete(tripId: string): Promise<void> {

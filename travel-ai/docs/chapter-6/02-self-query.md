@@ -291,7 +291,14 @@ toVectorSearchFilter(filters: ExtractedFilters): VectorSearchFilter {
   return {
     destination: filters.destination,
     budget_category: filters.budget_category,
-    // Note: budget_min/max require range queries
+// Note: budget_min/max require range queries
+
+### Currency contract
+
+Trip payloads and self-query budget predicates are expressed in euros (`EUR`).
+The parser rejects another currency explicitly; it never silently compares USD,
+GBP or other amounts as if they were euros. Currency conversion requires a
+separate, versioned exchange-rate service and is outside this sample.
     // which need special handling in Qdrant
   };
 }

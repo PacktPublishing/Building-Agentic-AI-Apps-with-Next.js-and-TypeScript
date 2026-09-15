@@ -4,17 +4,23 @@
  * Implements ITripRepository using Drizzle ORM
  */
 
-import { db, trips, users } from '@/lib/db';
-import { eq, and } from 'drizzle-orm';
+import { db, trips, users, tripIndexJobs } from '@/lib/db';
+import { eq, and, sql } from 'drizzle-orm';
 import type { ITripRepository, SaveTripData, SavedTrip } from '@/lib/domain/trip/repository';
 import { calculateReturnDate } from '@/ai/workflow/trip-planner-state';
 
+type DbExecutor = Pick<typeof db, 'select' | 'insert'>;
+
 export class DrizzleTripRepository implements ITripRepository {
+  async enqueueIndexing(tripId: string, operation: 'upsert' | 'delete' = 'upsert'): Promise<void> {
+    await db.insert(tripIndexJobs).values({ tripId, operation, status: 'pending' })
+      .onConflictDoUpdate({ target: tripIndexJobs.tripId, set: { operation, status: 'pending', attempts: 0, version: sql`${tripIndexJobs.version} + 1`, lastError: null, availableAt: new Date(), updatedAt: new Date() } });
+  }
   /**
    * Ensure user exists in local DB (sync from Supabase Auth)
    */
-  private async ensureUserExists(userId: string): Promise<void> {
-    const existingUser = await db
+  private async ensureUserExists(database: DbExecutor, userId: string): Promise<void> {
+    const existingUser = await database
       .select()
       .from(users)
       .where(eq(users.id, userId))
@@ -22,7 +28,7 @@ export class DrizzleTripRepository implements ITripRepository {
 
     if (existingUser.length === 0) {
       // Create user record for Supabase Auth user
-      await db.insert(users).values({
+      await database.insert(users).values({
         id: userId,
         email: `user-${userId.substring(0, 8)}@placeholder.com`, // Placeholder email
         name: null,
@@ -46,11 +52,10 @@ export class DrizzleTripRepository implements ITripRepository {
     const returnDate = calculateReturnDate(formInput.departureDate, formInput.stayDuration);
 
     try {
-      // Ensure user exists before inserting trip (FK constraint)
-      await this.ensureUserExists(userId);
-      const [newTrip] = await db
-        .insert(trips)
-        .values({
+      const newTrip = await db.transaction(async (tx) => {
+        // Trip and outbox row commit or roll back together.
+        await this.ensureUserExists(tx as unknown as DbExecutor, userId);
+        const [inserted] = await tx.insert(trips).values({
           userId,
           title: title || `Trip to ${formInput.arrivalCity}`,
           destination: formInput.arrivalCity,
@@ -70,8 +75,10 @@ export class DrizzleTripRepository implements ITripRepository {
           // Metadata
           status: 'confirmed', // User clicked save → confirmed
           threadId,
-        })
-        .returning();
+        }).returning();
+        await tx.insert(tripIndexJobs).values({ tripId: inserted.id, operation: 'upsert', status: 'pending' });
+        return inserted;
+      });
 
       console.log(`✅ Trip saved to database: ${newTrip.id}`);
 

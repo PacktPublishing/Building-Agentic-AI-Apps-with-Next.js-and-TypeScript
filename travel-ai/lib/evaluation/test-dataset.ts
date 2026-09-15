@@ -9,6 +9,10 @@
  * A test query with expected results
  */
 export interface TestQuery {
+  /** Version of the reviewed judgments/rules used for this query. */
+  judgmentVersion?: string;
+  /** Whether relevance is reviewed or heuristic diagnostic-only. */
+  judgmentSource?: 'reviewed' | 'heuristic';
   /** Unique ID for this test case */
   id: string;
   /** Natural language query */

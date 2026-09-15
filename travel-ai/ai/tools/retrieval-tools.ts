@@ -6,21 +6,16 @@
 
 import { DynamicStructuredTool } from "@langchain/core/tools";
 import { z } from "zod";
-import { SearchTripsUseCase } from "@/lib/application/use-cases/search-trips.use-case";
-import { QdrantVectorRepository } from "@/lib/infrastructure/qdrant/vector-repository";
-import { OpenAIEmbeddingsService } from "@/lib/infrastructure/embeddings/openai-service";
+import { getSearchTripsUseCase } from "@/lib/application/composition/retrieval";
+import { resolveRequestUser } from "@/lib/application/composition/auth";
 
 // Lazy initialization of the search use case
-let searchTripsUseCaseInstance: SearchTripsUseCase | null = null;
 
-function getSearchTripsUseCase(): SearchTripsUseCase {
-    if (!searchTripsUseCaseInstance) {
-        const vectorRepository = new QdrantVectorRepository();
-        const embeddingsService = new OpenAIEmbeddingsService();
-        searchTripsUseCaseInstance = new SearchTripsUseCase(vectorRepository, embeddingsService);
-    }
-    return searchTripsUseCaseInstance;
+export interface RetrievalAuthContext {
+    userId: string;
+    scope?: 'private' | 'public';
 }
+
 
 /**
  * Semantic search tool - search trips using natural language
@@ -30,17 +25,19 @@ export const searchTripsTool = new DynamicStructuredTool({
     description: "Search through all saved trips using natural language. Use this to find trip inspiration, discover destinations, or find trips matching specific criteria. Searches across ALL trips in the database for maximum discovery.",
     schema: z.object({
         query: z.string().describe("Natural language search query (e.g., 'beach vacation in Europe', 'budget trip to Asia', 'week-long city break', 'romantic getaway')"),
-        userId: z.string().optional().describe("Optional: filter to only this user's trips"),
+        scope: z.enum(['private', 'public']).default('private').describe('Search scope. Private requires a verified userId; public is reserved for the explicit public catalogue.'),
+        userId: z.string().optional().describe("Ignored for authorization; use createSearchTripsTool with a verified server context"),
         destination: z.string().optional().describe("Optional: filter by specific destination (IATA code like 'CDG', 'DUB')"),
         budgetCategory: z.enum(['economy', 'standard', 'premium']).optional().describe("Optional: filter by budget category"),
         limit: z.number().optional().default(5).describe("Maximum number of results to return (default: 5)"),
     }),
-    func: async ({ query, userId, destination, budgetCategory, limit }) => {
+    func: async ({ query, scope, destination, budgetCategory, limit }) => {
         try {
             const searchUseCase = getSearchTripsUseCase();
+            if (scope !== 'public') throw new Error('Verified authentication context required');
             const results = await searchUseCase.searchTrips({
                 query,
-                userId,
+                scope,
                 filters: { destination, budgetCategory },
                 limit,
             });
@@ -63,11 +60,53 @@ export const searchTripsTool = new DynamicStructuredTool({
         } catch (error) {
             return JSON.stringify({
                 success: false,
-                error: error instanceof Error ? error.message : 'Search failed',
+                error: 'Search failed',
             });
         }
     }
 });
+
+/** Build a private search tool with identity captured from a verified session. */
+export function createSearchTripsTool(context: RetrievalAuthContext): DynamicStructuredTool {
+    return new DynamicStructuredTool({
+        name: 'search_private_trips',
+        description: 'Search the authenticated user’s private trips.',
+        schema: z.object({
+            query: z.string(),
+            destination: z.string().optional(),
+            budgetCategory: z.enum(['economy', 'standard', 'premium']).optional(),
+            limit: z.number().int().positive().max(100).default(5),
+        }),
+        func: async ({ query, destination, budgetCategory, limit }) => {
+            const results = await getSearchTripsUseCase().searchTrips({
+                query, userId: context.userId, scope: context.scope ?? 'private',
+                filters: { destination, budgetCategory }, limit,
+            });
+            return JSON.stringify({ success: true, count: results.length, trips: results });
+        },
+    });
+}
+
+/** Session-bound variant: identity is resolved per invocation on the server. */
+export function createSearchTripsToolFromSession(
+    resolveSession: () => Promise<RetrievalAuthContext | null>,
+): DynamicStructuredTool {
+    return new DynamicStructuredTool({
+        name: 'search_session_trips',
+        description: 'Search trips using the currently authenticated server session.',
+        schema: z.object({ query: z.string(), destination: z.string().optional(), budgetCategory: z.enum(['economy', 'standard', 'premium']).optional(), limit: z.number().int().positive().max(100).default(5) }),
+        func: async ({ query, destination, budgetCategory, limit }) => {
+            const context = await resolveSession();
+            if (!context?.userId) return JSON.stringify({ success: false, error: 'Authentication required' });
+            const results = await getSearchTripsUseCase().searchTrips({ query, userId: context.userId, scope: context.scope ?? 'private', filters: { destination, budgetCategory }, limit });
+            return JSON.stringify({ success: true, count: results.length, trips: results });
+        },
+    });
+}
+
+export function createSearchTripsToolFromRequest(request: Request): DynamicStructuredTool {
+    return createSearchTripsToolFromSession(() => resolveRequestUser(request));
+}
 
 /**
  * Find similar trips tool - find trips similar to a given trip
@@ -80,10 +119,11 @@ export const findSimilarTripsTool = new DynamicStructuredTool({
         userId: z.string().describe("The user's ID"),
         limit: z.number().optional().default(3).describe("Maximum number of similar trips to return (default: 3)"),
     }),
-    func: async ({ tripId, userId, limit }) => {
+    func: async ({ tripId, limit }) => {
         try {
-            const searchUseCase = getSearchTripsUseCase();
-            const results = await searchUseCase.findSimilarTrips(tripId, userId, limit);
+            throw new Error('Verified authentication context required');
+            /* istanbul ignore next */
+            const results = await getSearchTripsUseCase().findSimilarTrips(tripId, '', limit);
             return JSON.stringify({
                 success: true,
                 sourceTripId: tripId,
@@ -103,8 +143,21 @@ export const findSimilarTripsTool = new DynamicStructuredTool({
         } catch (error) {
             return JSON.stringify({
                 success: false,
-                error: error instanceof Error ? error.message : 'Failed to find similar trips',
+                error: 'Unable to find similar trips',
             });
         }
     }
 });
+
+export function createFindSimilarTripsTool(context: RetrievalAuthContext): DynamicStructuredTool {
+    return new DynamicStructuredTool({
+        name: 'find_similar_private_trips',
+        description: 'Find trips similar to a trip owned by the authenticated user.',
+        schema: z.object({ tripId: z.string(), limit: z.number().int().positive().max(100).default(3) }),
+        func: async ({ tripId, limit }) => JSON.stringify({
+            success: true,
+            sourceTripId: tripId,
+            similarTrips: await getSearchTripsUseCase().findSimilarTrips(tripId, context.userId, limit),
+        }),
+    });
+}

@@ -117,7 +117,7 @@ export class RAGEvaluator {
     this.shouldEvaluateGeneration = evalConfig.evaluateGeneration ?? false;
 
     this.llmJudge = new ChatAnthropic({
-      modelName: evalConfig.judgeModel || 'claude-3-haiku-20240307',
+      modelName: evalConfig.judgeModel || config.model_name,
       temperature: 0,
       anthropicApiKey: config.anthropic_api_key,
     });

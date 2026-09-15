@@ -10,6 +10,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
+    "test:issues": "vitest run ai/retrieval/destination-codes.test.ts lib/evaluation/metrics.test.ts lib/evaluation/benchmark.test.ts lib/infrastructure/indexing/trip-index-worker.test.ts lib/infrastructure/search/rrf.test.ts lib/infrastructure/search/bm25-index.test.ts lib/infrastructure/search/hybrid-search.service.test.ts lib/application/use-cases/search-trips.use-case.test.ts lib/supabase/server.test.ts",
     "test:agent": "vitest run ai/agents/agent.test.ts",
     "test:agent:watch": "vitest ai/agents/agent.test.ts",
     "test:supabase": "vitest run ai/agents/supabase-agent.test.ts",
@@ -20,7 +21,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit migrate",
     "db:push": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit push",
-    "db:studio": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit studio"
+    "db:studio": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit studio",
+    "evaluate:rag": "tsx scripts/evaluate-rag.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

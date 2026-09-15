@@ -94,7 +94,7 @@ export class HybridSearchService implements IHybridSearchService {
     }));
 
     // Fuse results using RRF
-    const fusedResults = fuseWithRRF([semanticRanked, lexicalRanked], rrfConfig);
+    const fusedResults = fuseWithRRF([semanticRanked, lexicalRanked], { ...rrfConfig, alpha });
 
     console.log(`  Fused: ${fusedResults.length} unique results`);
 
@@ -132,6 +132,18 @@ export class HybridSearchService implements IHybridSearchService {
     }
   }
 
+  async searchWithVector(query: string, vector: number[], options: HybridSearchOptions = {}): Promise<HybridSearchResult[]> {
+    const { alpha, limit, rrfConfig } = { ...DEFAULT_OPTIONS, ...options };
+    const fetchLimit = Math.max(limit * 3, 20);
+    const [semanticResults, lexicalResults] = await Promise.all([
+      this.vectorRepository.search(vector, options.filters || {}, fetchLimit),
+      Promise.resolve(this.lexicalSearch(query, fetchLimit, options.filters)),
+    ]);
+    const semanticRanked = semanticResults.map((r, i) => ({ id: r.id, rank: i + 1, score: r.score, payload: r.payload, source: 'semantic' as const }));
+    const lexicalRanked = lexicalResults.map((r, i) => ({ id: r.id, rank: i + 1, score: r.normalizedScore, payload: r.payload, source: 'lexical' as const }));
+    return fuseWithRRF([semanticRanked, lexicalRanked], { ...rrfConfig, alpha }).slice(0, limit);
+  }
+
   /**
    * Lexical search using BM25
    */
@@ -144,13 +156,21 @@ export class HybridSearchService implements IHybridSearchService {
     const filterFn = filters
       ? (payload: TripVectorPayload) => {
           if (filters.user_id && payload.user_id !== filters.user_id) return false;
-          if (filters.destination && payload.destination !== filters.destination)
-            return false;
+          if (filters.destination) {
+            const destinations = Array.isArray(filters.destination) ? filters.destination : [filters.destination];
+            if (!destinations.includes(payload.destination)) return false;
+          }
           if (
             filters.budget_category &&
             payload.budget_category !== filters.budget_category
           )
             return false;
+          if (filters.budget_min !== undefined && payload.total_budget < filters.budget_min) return false;
+          if (filters.budget_max !== undefined && payload.total_budget > filters.budget_max) return false;
+          if (filters.min_duration !== undefined && payload.stay_duration < filters.min_duration) return false;
+          if (filters.max_duration !== undefined && payload.stay_duration > filters.max_duration) return false;
+          if (filters.departure_city && payload.departure_city !== filters.departure_city) return false;
+          if (filters.num_people !== undefined && payload.num_people !== filters.num_people) return false;
           return true;
         }
       : undefined;
@@ -178,23 +198,15 @@ export class HybridSearchService implements IHybridSearchService {
 
     try {
       // Clear existing index
-      this.bm25Index.clear();
-
-      // Fetch all documents from Qdrant using scroll
-      // Note: In production, you might want to paginate this
+      // Build a replacement index first. A failed rebuild must not destroy a
+      // healthy index, and vector search limits must not truncate the corpus.
       const queryVector = await this.embeddingsService.generate('trip travel');
-
-      // Get a large batch of documents
-      const results = await this.vectorRepository.search(queryVector, {}, 1000);
-
-      // Add each document to BM25 index
-      for (const result of results) {
-        this.bm25Index.add(
-          result.id,
-          result.payload.summary_text,
-          result.payload
-        );
-      }
+      const results = this.vectorRepository.listAll
+        ? await this.vectorRepository.listAll()
+        : await this.vectorRepository.search(queryVector, {}, 1000);
+      const replacement = new BM25Index();
+      for (const result of results) replacement.add(result.id, result.payload.summary_text, result.payload);
+      this.bm25Index = replacement;
 
       this.indexInitialized = true;
       const stats = this.bm25Index.getStats();

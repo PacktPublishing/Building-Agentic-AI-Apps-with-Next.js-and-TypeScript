@@ -70,7 +70,7 @@ export class MultiQueryRetriever {
     multiQueryConfig: MultiQueryConfig = {}
   ) {
     this.llm = new ChatAnthropic({
-      modelName: multiQueryConfig.model || 'claude-3-haiku-20240307',
+      modelName: multiQueryConfig.model || config.model_name,
       temperature: 0.5, // Some creativity for variations
       anthropicApiKey: config.anthropic_api_key,
     });

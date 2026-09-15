@@ -30,15 +30,25 @@ export class SearchTripsUseCase implements IRetrievalService {
     console.log(`🔍 SearchTripsUseCase: Searching for "${query.query}"`);
 
     try {
+      const scope = query.scope ?? 'private';
+      if (scope === 'private' && !query.userId) {
+        throw new Error('Authentication required');
+      }
       // Step 1: Generate embedding from query
       console.log('1️⃣ Generating query embedding...');
       const queryEmbedding = await this.embeddingsService.generate(query.query);
 
       // Step 2: Build search filter (all fields optional)
       const filter: VectorSearchFilter = {
-        user_id: query.userId, // Optional - searches all trips if not provided
+        user_id: scope === 'public' ? undefined : query.userId,
         destination: query.filters?.destination,
         budget_category: query.filters?.budgetCategory,
+        budget_min: query.filters?.minBudget,
+        budget_max: query.filters?.maxBudget,
+        min_duration: query.filters?.minDuration,
+        max_duration: query.filters?.maxDuration,
+        departure_city: query.filters?.departureCity,
+        num_people: query.filters?.numPeople,
       };
 
       // Step 3: Search Qdrant
@@ -87,6 +97,10 @@ export class SearchTripsUseCase implements IRetrievalService {
       if (!sourcePoint) {
         console.warn(`⚠️ Trip ${tripId} not found in vector database`);
         return [];
+      }
+      if (!userId || sourcePoint.payload.user_id !== userId) {
+        // Do not reveal whether another user's trip exists.
+        throw new Error('Trip not found');
       }
 
       // Step 2: Search for similar trips using the source vector

@@ -21,6 +21,7 @@ import { QueryRewriter } from './query-rewriter';
 import { QueryExpander } from './query-expander';
 import { MultiQueryRetriever } from './multi-query-retriever';
 import { HyDEGenerator } from './hyde-generator';
+import { normalizeDestination } from './destination-codes';
 
 /**
  * Pipeline configuration
@@ -130,6 +131,9 @@ export class AdvancedRAGPipeline {
     if (this.config.enableSelfQuery) {
       console.log('🔍 Stage 1: Self-Query');
       const selfQuery = await this.getSelfQueryParser().parse(query);
+      if (selfQuery.valid === false) {
+        throw new Error(selfQuery.error || 'Search constraints could not be validated');
+      }
       result.selfQuery = selfQuery;
       extractedFilters = selfQuery.filters;
       processedQuery = selfQuery.semanticQuery;
@@ -178,13 +182,14 @@ export class AdvancedRAGPipeline {
       console.log('🔮 Stage 4: HyDE Search');
       const hydeResult = await this.getHyDEGenerator().generate(processedQuery);
       result.hydeDocument = hydeResult.hypotheticalDocument;
-      // Use HyDE embedding for search (would need custom search method)
-      // For now, fall back to standard search
-      searchResults = await this.hybridSearch.search(processedQuery, {
+      const hydeOptions = {
         limit: this.config.prerankLimit,
         alpha: this.config.hybridAlpha,
         filters: this.toSearchFilters(extractedFilters),
-      });
+      };
+      searchResults = this.hybridSearch.searchWithVector
+        ? await this.hybridSearch.searchWithVector(processedQuery, hydeResult.embedding, hydeOptions)
+        : await this.hybridSearch.search(processedQuery, hydeOptions);
       stagesExecuted.push('hyde');
     } else {
       console.log('🔎 Stage 4: Hybrid Search');
@@ -242,16 +247,24 @@ export class AdvancedRAGPipeline {
    * Convert extracted filters to search filter format
    */
   private toSearchFilters(filters: Record<string, unknown>): {
-    destination?: string;
+    destination?: string | string[];
     budget_category?: 'economy' | 'standard' | 'premium';
+    budget_min?: number; budget_max?: number; min_duration?: number; max_duration?: number;
+    departure_city?: string; num_people?: number;
   } {
     return {
-      destination: filters.destination as string | undefined,
+      destination: filters.destination ? normalizeDestination(filters.destination as string) : undefined,
       budget_category: filters.budget_category as
         | 'economy'
         | 'standard'
         | 'premium'
         | undefined,
+      budget_min: filters.budget_min as number | undefined,
+      budget_max: filters.budget_max as number | undefined,
+      min_duration: filters.min_duration as number | undefined,
+      max_duration: filters.max_duration as number | undefined,
+      departure_city: filters.departure_city as string | undefined,
+      num_people: filters.num_people as number | undefined,
     };
   }
 
@@ -306,5 +319,9 @@ export class AdvancedRAGPipeline {
    */
   getConfig(): Required<AdvancedRAGPipelineConfig> {
     return { ...this.config };
+  }
+
+  getHybridSearchService(): IHybridSearchService {
+    return this.hybridSearch;
   }
 }

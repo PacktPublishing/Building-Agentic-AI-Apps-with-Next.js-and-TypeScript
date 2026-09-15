@@ -85,13 +85,13 @@ export async function fetchAllTrips(): Promise<TripRecord[]> {
 
     for (const point of result.points) {
       allTrips.push({
-        id: point.id as string,
+        id: String(point.id),
         payload: point.payload as unknown as TripVectorPayload,
       });
     }
 
     if (!result.next_page_offset) break;
-    offset = result.next_page_offset;
+    offset = typeof result.next_page_offset === 'string' || typeof result.next_page_offset === 'number' ? result.next_page_offset : null;
   }
 
   return allTrips;
@@ -113,8 +113,9 @@ export function findRelevantTrips(
     matchesRelevanceRules(trip, testQuery.relevanceRules!)
   );
 
-  // Return up to 10 relevant trip IDs
-  return matchingTrips.slice(0, 10).map((t) => t.id);
+  // Keep the complete reviewed/derived positive set. Truncating labels makes
+  // recall and NDCG depend on arbitrary corpus order.
+  return matchingTrips.map((t) => t.id);
 }
 
 /**

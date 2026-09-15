@@ -41,7 +41,7 @@ export class SaveTripUseCase {
 
       // Step 3: Generate embedding vector
       console.log('3️⃣ Generating embedding...');
-      const embedding = await this.embeddingsService.generate(summaryText);
+      const embedding = await this.withRetry(() => this.embeddingsService.generate(summaryText));
 
       // Step 4: Build Qdrant payload
       console.log('4️⃣ Building vector payload...');
@@ -67,7 +67,7 @@ export class SaveTripUseCase {
 
       // Step 5: Upsert to Qdrant
       console.log('5️⃣ Upserting to Qdrant...');
-      await this.vectorRepository.upsert(savedTrip.id, embedding, vectorPayload);
+      await this.withRetry(() => this.vectorRepository.upsert(savedTrip.id, embedding, vectorPayload));
 
       console.log('✅ SaveTripUseCase: Dual-storage save completed successfully!');
 
@@ -83,5 +83,17 @@ export class SaveTripUseCase {
 
       throw error;
     }
+  }
+
+  private async withRetry<T>(operation: () => Promise<T>, maxAttempts = 3): Promise<T> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try { return await operation(); } catch (error) {
+        lastError = error;
+        if (attempt === maxAttempts) break;
+        await new Promise((resolve) => setTimeout(resolve, 100 * 2 ** (attempt - 1)));
+      }
+    }
+    throw lastError;
   }
 }

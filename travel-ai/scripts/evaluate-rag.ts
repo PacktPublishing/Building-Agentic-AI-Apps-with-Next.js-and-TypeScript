@@ -14,6 +14,8 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 import { QdrantVectorRepository } from '../lib/infrastructure/qdrant/vector-repository';
 import { OpenAIEmbeddingsService } from '../lib/infrastructure/embeddings/openai-service';
 import { HybridSearchService } from '../lib/infrastructure/search/hybrid-search.service';
+import { AdvancedRAGPipeline } from '../ai/retrieval/advanced-rag-pipeline';
+import { AdvancedPipelineEvaluationAdapter } from '../lib/evaluation/advanced-pipeline-adapter';
 import { RAGEvaluator } from '../lib/evaluation/evaluator';
 import {
   TEST_QUERIES,
@@ -27,6 +29,9 @@ const kArg = args.find((arg) => arg.startsWith('--k='));
 const categoryArg = args.find((arg) => arg.startsWith('--category='));
 const difficultyArg = args.find((arg) => arg.startsWith('--difficulty='));
 const verboseArg = args.includes('--verbose');
+const advancedArg = args.includes('--advanced');
+const minHitArg = args.find((arg) => arg.startsWith('--min-hit-rate='));
+const minMrrArg = args.find((arg) => arg.startsWith('--min-mrr='));
 
 const k = kArg ? parseInt(kArg.split('=')[1], 10) : 5;
 const category = categoryArg ? categoryArg.split('=')[1] : undefined;
@@ -50,7 +55,10 @@ async function main() {
   console.log('');
 
   // Create evaluator
-  const evaluator = new RAGEvaluator(hybridSearchService, { k });
+  const searchService = advancedArg
+    ? new AdvancedPipelineEvaluationAdapter(new AdvancedRAGPipeline(hybridSearchService, { limit: k }))
+    : hybridSearchService;
+  const evaluator = new RAGEvaluator(searchService, { k });
 
   // Select test queries
   let testQueries = TEST_QUERIES;
@@ -61,11 +69,12 @@ async function main() {
   }
 
   if (difficulty) {
-    testQueries = getQueriesByDifficulty(difficulty as any);
+    testQueries = testQueries.filter((q) => q.difficulty === difficulty);
     console.log(`📋 Filtering by difficulty: ${difficulty}`);
   }
 
-  console.log(`📋 Running evaluation on ${testQueries.length} queries (K=${k})\n`);
+  console.log(`📋 Running ${advancedArg ? 'advanced pipeline' : 'hybrid baseline'} evaluation on ${testQueries.length} queries (K=${k})\n`);
+  console.log('📚 Judgment mode: heuristic diagnostics from relevanceRules (not reviewed labels)');
 
   // Note: relevantTripIds are now populated automatically by the evaluator
   // based on relevanceRules defined in test-dataset.ts
@@ -99,6 +108,13 @@ async function main() {
       console.log('✅ Precision is good - results are mostly relevant');
     } else {
       console.log('⚠️  Precision is low - consider better filtering');
+    }
+
+    const minHit = minHitArg ? Number(minHitArg.split('=')[1]) : undefined;
+    const minMrr = minMrrArg ? Number(minMrrArg.split('=')[1]) : undefined;
+    if ((minHit !== undefined && agg.hitRate < minHit) || (minMrr !== undefined && agg.mrr < minMrr)) {
+      console.error('❌ Evaluation regression threshold failed');
+      process.exitCode = 2;
     }
 
     console.log('\n💡 Tips for improvement:');
