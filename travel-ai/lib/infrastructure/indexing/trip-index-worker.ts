@@ -12,6 +12,7 @@ export interface IndexJob {
 /** Persistence port; implementations should claim jobs atomically. */
 export interface IndexJobStore {
   claim(limit: number, now: Date): Promise<IndexJob[]>;
+  isCurrent?(tripId: string, version: number): Promise<boolean>;
   complete(id: string): Promise<void>;
   fail(id: string, error: string, nextAttemptAt: Date): Promise<void>;
 }
@@ -26,6 +27,12 @@ import { and, eq, lte, or, inArray } from 'drizzle-orm';
 
 /** PostgreSQL implementation used by the scheduled worker process. */
 export class DrizzleIndexJobStore implements IndexJobStore {
+  async isCurrent(tripId: string, version: number): Promise<boolean> {
+    const [job] = await db.select({ version: tripIndexJobs.version }).from(tripIndexJobs)
+      .where(eq(tripIndexJobs.tripId, tripId)).limit(1);
+    return !job || job.version <= version;
+  }
+
   async claim(limit: number, now: Date): Promise<IndexJob[]> {
     return db.transaction(async (tx) => {
       const rows = await tx.select().from(tripIndexJobs)
@@ -65,6 +72,10 @@ export class TripIndexWorker {
     let failed = 0;
     for (const job of claimed) {
       try {
+        if (this.jobs.isCurrent && !(await this.jobs.isCurrent(job.tripId, job.version))) {
+          await this.jobs.complete(job.id);
+          continue;
+        }
         if (job.operation === 'delete') await this.indexer.delete(job.tripId, job.version);
         else await this.indexer.upsert(job.tripId, job.version);
         await this.jobs.complete(job.id);
