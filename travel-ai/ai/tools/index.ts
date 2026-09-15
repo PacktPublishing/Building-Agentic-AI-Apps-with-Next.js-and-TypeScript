@@ -11,7 +11,7 @@ export { getMcpClient, getMcpTools, closeMcpClient } from "./mcp-client";
 
 // Individual tools
 export { getCurrentDateTool } from "./date-tool";
-export { searchTripsTool, findSimilarTripsTool } from "./retrieval-tools";
+export { searchTripsTool, findSimilarTripsTool, createSearchTripsTool, createSearchTripsToolFromSession, createSearchTripsToolFromRequest, createFindSimilarTripsTool } from "./retrieval-tools";
 
 /**
  * Get all custom tools (non-MCP)
