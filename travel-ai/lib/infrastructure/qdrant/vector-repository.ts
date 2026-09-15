@@ -94,7 +94,9 @@ export class QdrantVectorRepository implements IVectorRepository {
       };
     } catch (error) {
       console.error('❌ Failed to get point from Qdrant:', error);
-      return null;
+      // Preserve the distinction between an absent point and an infrastructure
+      // outage. Callers can then sanitize the error without broadening access.
+      throw new Error('Qdrant retrieval failed');
     }
   }
 
