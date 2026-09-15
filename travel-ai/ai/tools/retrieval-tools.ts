@@ -9,6 +9,7 @@ import { z } from "zod";
 import { SearchTripsUseCase } from "@/lib/application/use-cases/search-trips.use-case";
 import { QdrantVectorRepository } from "@/lib/infrastructure/qdrant/vector-repository";
 import { OpenAIEmbeddingsService } from "@/lib/infrastructure/embeddings/openai-service";
+import { getVerifiedUserId } from "@/lib/supabase/server";
 
 // Lazy initialization of the search use case
 let searchTripsUseCaseInstance: SearchTripsUseCase | null = null;
@@ -111,6 +112,13 @@ export function createSearchTripsToolFromSession(
             const results = await getSearchTripsUseCase().searchTrips({ query, userId: context.userId, scope: context.scope ?? 'private', filters: { destination, budgetCategory }, limit });
             return JSON.stringify({ success: true, count: results.length, trips: results });
         },
+    });
+}
+
+export function createSearchTripsToolFromRequest(request: Request): DynamicStructuredTool {
+    return createSearchTripsToolFromSession(async () => {
+        const userId = await getVerifiedUserId(request);
+        return userId ? { userId, scope: 'private' as const } : null;
     });
 }
 
