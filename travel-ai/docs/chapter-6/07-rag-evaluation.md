@@ -669,7 +669,8 @@ async function compareConfigurations() {
 
 ## Reproducible evaluation contract
 
-Run `pnpm evaluate:rag --k=5`. Add `--min-hit-rate=0.8` or
+Run `pnpm evaluate:rag --k=5` for the hybrid baseline, or add `--advanced` to
+evaluate the actual `AdvancedRAGPipeline`. Add `--min-hit-rate=0.8` or
 `--min-mrr=0.5` in CI to fail on a configured regression. `--category` and
 `--difficulty` are intersected when both are supplied.
 

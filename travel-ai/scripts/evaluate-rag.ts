@@ -14,6 +14,8 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 import { QdrantVectorRepository } from '../lib/infrastructure/qdrant/vector-repository';
 import { OpenAIEmbeddingsService } from '../lib/infrastructure/embeddings/openai-service';
 import { HybridSearchService } from '../lib/infrastructure/search/hybrid-search.service';
+import { AdvancedRAGPipeline } from '../ai/retrieval/advanced-rag-pipeline';
+import { AdvancedPipelineEvaluationAdapter } from '../lib/evaluation/advanced-pipeline-adapter';
 import { RAGEvaluator } from '../lib/evaluation/evaluator';
 import {
   TEST_QUERIES,
@@ -27,6 +29,7 @@ const kArg = args.find((arg) => arg.startsWith('--k='));
 const categoryArg = args.find((arg) => arg.startsWith('--category='));
 const difficultyArg = args.find((arg) => arg.startsWith('--difficulty='));
 const verboseArg = args.includes('--verbose');
+const advancedArg = args.includes('--advanced');
 const minHitArg = args.find((arg) => arg.startsWith('--min-hit-rate='));
 const minMrrArg = args.find((arg) => arg.startsWith('--min-mrr='));
 
@@ -52,7 +55,10 @@ async function main() {
   console.log('');
 
   // Create evaluator
-  const evaluator = new RAGEvaluator(hybridSearchService, { k });
+  const searchService = advancedArg
+    ? new AdvancedPipelineEvaluationAdapter(new AdvancedRAGPipeline(hybridSearchService, { limit: k }))
+    : hybridSearchService;
+  const evaluator = new RAGEvaluator(searchService, { k });
 
   // Select test queries
   let testQueries = TEST_QUERIES;
@@ -67,7 +73,7 @@ async function main() {
     console.log(`📋 Filtering by difficulty: ${difficulty}`);
   }
 
-  console.log(`📋 Running evaluation on ${testQueries.length} queries (K=${k})\n`);
+  console.log(`📋 Running ${advancedArg ? 'advanced pipeline' : 'hybrid baseline'} evaluation on ${testQueries.length} queries (K=${k})\n`);
   console.log('📚 Judgment mode: heuristic diagnostics from relevanceRules (not reviewed labels)');
 
   // Note: relevantTripIds are now populated automatically by the evaluator
