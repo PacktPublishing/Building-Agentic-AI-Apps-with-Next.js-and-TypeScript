@@ -97,6 +97,23 @@ export function createSearchTripsTool(context: RetrievalAuthContext): DynamicStr
     });
 }
 
+/** Session-bound variant: identity is resolved per invocation on the server. */
+export function createSearchTripsToolFromSession(
+    resolveSession: () => Promise<RetrievalAuthContext | null>,
+): DynamicStructuredTool {
+    return new DynamicStructuredTool({
+        name: 'search_session_trips',
+        description: 'Search trips using the currently authenticated server session.',
+        schema: z.object({ query: z.string(), destination: z.string().optional(), budgetCategory: z.enum(['economy', 'standard', 'premium']).optional(), limit: z.number().int().positive().max(100).default(5) }),
+        func: async ({ query, destination, budgetCategory, limit }) => {
+            const context = await resolveSession();
+            if (!context?.userId) return JSON.stringify({ success: false, error: 'Authentication required' });
+            const results = await getSearchTripsUseCase().searchTrips({ query, userId: context.userId, scope: context.scope ?? 'private', filters: { destination, budgetCategory }, limit });
+            return JSON.stringify({ success: true, count: results.length, trips: results });
+        },
+    });
+}
+
 /**
  * Find similar trips tool - find trips similar to a given trip
  */
