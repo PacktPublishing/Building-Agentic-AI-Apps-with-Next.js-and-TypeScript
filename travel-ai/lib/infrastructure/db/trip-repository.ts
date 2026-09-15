@@ -17,8 +17,8 @@ export class DrizzleTripRepository implements ITripRepository {
   /**
    * Ensure user exists in local DB (sync from Supabase Auth)
    */
-  private async ensureUserExists(userId: string): Promise<void> {
-    const existingUser = await db
+  private async ensureUserExists(database: any, userId: string): Promise<void> {
+    const existingUser = await database
       .select()
       .from(users)
       .where(eq(users.id, userId))
@@ -26,7 +26,7 @@ export class DrizzleTripRepository implements ITripRepository {
 
     if (existingUser.length === 0) {
       // Create user record for Supabase Auth user
-      await db.insert(users).values({
+      await database.insert(users).values({
         id: userId,
         email: `user-${userId.substring(0, 8)}@placeholder.com`, // Placeholder email
         name: null,
@@ -50,11 +50,10 @@ export class DrizzleTripRepository implements ITripRepository {
     const returnDate = calculateReturnDate(formInput.departureDate, formInput.stayDuration);
 
     try {
-      // Ensure user exists before inserting trip (FK constraint)
-      await this.ensureUserExists(userId);
-      const [newTrip] = await db
-        .insert(trips)
-        .values({
+      const newTrip = await db.transaction(async (tx) => {
+        // Trip and outbox row commit or roll back together.
+        await this.ensureUserExists(tx, userId);
+        const [inserted] = await tx.insert(trips).values({
           userId,
           title: title || `Trip to ${formInput.arrivalCity}`,
           destination: formInput.arrivalCity,
@@ -74,8 +73,10 @@ export class DrizzleTripRepository implements ITripRepository {
           // Metadata
           status: 'confirmed', // User clicked save → confirmed
           threadId,
-        })
-        .returning();
+        }).returning();
+        await tx.insert(tripIndexJobs).values({ tripId: inserted.id, operation: 'upsert', status: 'pending' });
+        return inserted;
+      });
 
       console.log(`✅ Trip saved to database: ${newTrip.id}`);
 
