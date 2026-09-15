@@ -20,7 +20,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit migrate",
     "db:push": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit push",
-    "db:studio": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit studio"
+    "db:studio": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit studio",
+    "evaluate:rag": "tsx scripts/evaluate-rag.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
