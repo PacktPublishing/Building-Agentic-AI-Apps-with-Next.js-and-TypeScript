@@ -121,7 +121,7 @@ export class QdrantVectorRepository implements IVectorRepository {
       if (filter.destination) {
         mustConditions.push({
           key: 'destination',
-          match: { value: filter.destination },
+          match: Array.isArray(filter.destination) ? { any: filter.destination } : { value: filter.destination },
         });
       }
 

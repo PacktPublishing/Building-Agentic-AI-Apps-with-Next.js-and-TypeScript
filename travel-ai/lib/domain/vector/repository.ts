@@ -33,7 +33,7 @@ export interface TripVectorPayload extends Record<string, unknown> {
  */
 export interface VectorSearchFilter {
   user_id?: string;
-  destination?: string;
+  destination?: string | string[];
   budget_category?: 'economy' | 'standard' | 'premium';
   budget_min?: number;
   budget_max?: number;

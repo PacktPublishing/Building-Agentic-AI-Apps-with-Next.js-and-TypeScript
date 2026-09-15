@@ -21,6 +21,7 @@ import { QueryRewriter } from './query-rewriter';
 import { QueryExpander } from './query-expander';
 import { MultiQueryRetriever } from './multi-query-retriever';
 import { HyDEGenerator } from './hyde-generator';
+import { normalizeDestination } from './destination-codes';
 
 /**
  * Pipeline configuration
@@ -246,13 +247,13 @@ export class AdvancedRAGPipeline {
    * Convert extracted filters to search filter format
    */
   private toSearchFilters(filters: Record<string, unknown>): {
-    destination?: string;
+    destination?: string | string[];
     budget_category?: 'economy' | 'standard' | 'premium';
     budget_min?: number; budget_max?: number; min_duration?: number; max_duration?: number;
     departure_city?: string; num_people?: number;
   } {
     return {
-      destination: filters.destination as string | undefined,
+      destination: filters.destination ? normalizeDestination(filters.destination as string) : undefined,
       budget_category: filters.budget_category as
         | 'economy'
         | 'standard'

@@ -156,8 +156,10 @@ export class HybridSearchService implements IHybridSearchService {
     const filterFn = filters
       ? (payload: TripVectorPayload) => {
           if (filters.user_id && payload.user_id !== filters.user_id) return false;
-          if (filters.destination && payload.destination !== filters.destination)
-            return false;
+          if (filters.destination) {
+            const destinations = Array.isArray(filters.destination) ? filters.destination : [filters.destination];
+            if (!destinations.includes(payload.destination)) return false;
+          }
           if (
             filters.budget_category &&
             payload.budget_category !== filters.budget_category
