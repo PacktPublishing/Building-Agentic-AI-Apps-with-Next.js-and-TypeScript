@@ -31,7 +31,7 @@ export function ActivityCard({ activity }: ActivityCardProps) {
                     <div className="flex flex-col">
                         <span className="text-xs text-gray-500 uppercase tracking-wide mb-1">Price</span>
                         <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                            {activity.price.currencyCode} {parseFloat(activity.price.amount).toFixed(0)}
+                            {activity.price ? `${activity.price.currencyCode} ${Number(activity.price.amount).toFixed(0)}` : 'Price unavailable'}
                         </div>
                     </div>
                     {activity.minimumDuration && (
@@ -44,7 +44,7 @@ export function ActivityCard({ activity }: ActivityCardProps) {
                     )}
                 </div>
 
-                <a
+                {activity.bookingLink && <a
                     href={activity.bookingLink}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -54,7 +54,7 @@ export function ActivityCard({ activity }: ActivityCardProps) {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                     </svg>
-                </a>
+                </a>}
             </div>
         </div>
     );

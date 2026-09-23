@@ -169,7 +169,7 @@ class SupabaseAgent {
         const lastMsg = result.messages[result.messages.length - 1];
 
         if (lastMsg.type === 'ai' || lastMsg._getType?.() === 'ai') {
-            let content = typeof lastMsg.content === 'string'
+            const content = typeof lastMsg.content === 'string'
                 ? lastMsg.content
                 : Array.isArray(lastMsg.content)
                     ? lastMsg.content.map((c: any) => c.text || JSON.stringify(c)).join('')

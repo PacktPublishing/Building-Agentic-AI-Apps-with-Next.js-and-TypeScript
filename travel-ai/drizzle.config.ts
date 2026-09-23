@@ -7,7 +7,8 @@ export default defineConfig({
   dbCredentials: {
     url: process.env.POSTGRES_URL_NON_POOLING!,
     ssl: {
-      rejectUnauthorized: false
+      rejectUnauthorized: true,
+      ...(process.env.POSTGRES_CA_CERT ? { ca: process.env.POSTGRES_CA_CERT.replace(/\\n/g, "\n") } : {})
     }
   },
 });

@@ -1,17 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  env: {
-    CUSTOM_KEY: process.env.CUSTOM_KEY,
-  },
-  experimental: {
-    typedRoutes: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  typedRoutes: true,
   images: {
     unoptimized: true,
   },

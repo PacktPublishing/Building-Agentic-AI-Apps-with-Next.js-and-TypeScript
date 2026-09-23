@@ -165,8 +165,8 @@ describe('Chat API', () => {
                                 const event: SSEEvent = JSON.parse(line.substring(6));
                                 events.push(event);
                                 
-                                if (event.type === 'toolCall') {
-                                    console.log('🔧 Tool called:', event.data.name);
+                                if (event.type === 'tool_call_start') {
+                                    console.log('🔧 Tool called:', event.data.toolName);
                                 }
                             } catch (e) {
                                 // Ignore

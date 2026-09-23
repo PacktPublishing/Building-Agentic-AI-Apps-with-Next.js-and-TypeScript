@@ -6,6 +6,7 @@
 
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
 import { config } from "../../config";
+import { validateFeature } from '@/lib/config/feature-env';
 
 let mcpClientInstance: MultiServerMCPClient | null = null;
 
@@ -13,6 +14,7 @@ let mcpClientInstance: MultiServerMCPClient | null = null;
  * Get or create the MCP client singleton
  */
 export async function getMcpClient(): Promise<MultiServerMCPClient> {
+    validateFeature('chat');
     if (!mcpClientInstance) {
         mcpClientInstance = new MultiServerMCPClient({
             amadeus: {

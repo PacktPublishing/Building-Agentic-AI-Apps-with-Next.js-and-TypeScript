@@ -1,6 +1,8 @@
-# ReAct Agent with Human-in-the-Loop
+# ReAct Agent (read-only tools)
 
-This directory contains a ReAct (Reasoning and Acting) agent implementation using LangGraph with Human-in-the-Loop capabilities.
+> The Human-in-the-Loop examples below are historical, not executable. The former approval methods are disabled because they did not interrupt before tools. Current travel tools only search; there is no booking action. See `HITL_GUIDE.md` for the safety contract before adding a write tool.
+
+This directory contains a ReAct (Reasoning and Acting) agent implementation using LangGraph.
 
 ## Architecture
 

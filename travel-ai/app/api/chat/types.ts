@@ -19,15 +19,15 @@ export interface ToolCall {
 // Activity data structure from Amadeus
 export interface Activity {
     id: string;
-    type: string;
+    type?: string;
     name: string;
-    geoCode: {
+    geoCode?: {
         latitude: number;
         longitude: number;
     };
     pictures?: string[];
-    bookingLink: string;
-    price: {
+    bookingLink?: string;
+    price?: {
         currencyCode: string;
         amount: string;
     };
@@ -37,34 +37,34 @@ export interface Activity {
 // Flight data structure
 export interface Flight {
     id: string;
-    price: {
+    price?: {
         amount: number;
         currency: string;
     };
     outbound: FlightSegment;
-    inbound: FlightSegment;
+    inbound?: FlightSegment;
 }
 
 export interface FlightSegment {
     departure: {
         airport: {
             code: string;
-            name: string;
+            name?: string;
         };
         time: string;
     };
     arrival: {
         airport: {
             code: string;
-            name: string;
+            name?: string;
         };
         time: string;
     };
     airline: {
-        code: string;
-        name: string;
+        code?: string;
+        name?: string;
     };
-    duration: string;
+    duration?: string;
     stops: number;
 }
 
@@ -72,13 +72,13 @@ export interface FlightSegment {
 export interface Hotel {
     id: string;
     name: string;
-    rating: number;
+    rating?: number;
     address: {
-        street: string;
-        city: string;
-        postalCode: string;
+        street?: string;
+        city?: string;
+        postalCode?: string;
     };
-    location: {
+    location?: {
         latitude: number;
         longitude: number;
     };
@@ -86,13 +86,13 @@ export interface Hotel {
         phone: string;
         email: string;
     };
-    description: string;
-    amenities: string[];
-    price: {
+    description?: string;
+    amenities?: string[];
+    price?: {
         amount: number;
         currency: string;
     };
-    images: string[];
+    images?: string[];
 }
 
 // SSE Event types

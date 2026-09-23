@@ -1,11 +1,13 @@
 import { ChatAnthropic } from "@langchain/anthropic";
 import { MemorySaver } from "@langchain/langgraph";
-import { createAgent } from "langchain";
+import { createAgent, createMiddleware } from "langchain";
 import { DynamicStructuredTool } from "@langchain/core/tools";
 import { config } from "../../config";
 import { z } from "zod";
 import { ContextManager } from "../context/context-manager";
 import { TRAVEL_ASSISTANT_PROMPT } from "../prompts/system-prompt";
+import { ActivityOffer, availablePrice, FlightOffer, HotelOffer, normalizeToolResult, type NormalizedToolResult } from './tool-result';
+import { assertReadOnlyTools } from './tool-safety';
 
 // Tools (externalized for reusability)
 import { getAllTools, closeMcpClient } from "../tools";
@@ -39,50 +41,28 @@ const BaseMessageSchema = z.object({
     _getType: z.function().returns(z.string()).optional(),
 });
 
-const ToolResultSchema = z.object({
-    success: z.boolean(),
-    data: z.array(z.unknown()).optional(),
-    meta: z.object({
-        totalAvailable: z.number().optional(),
-    }).optional(),
-    error: z.string().optional(),
-});
-
 // TypeScript types inferred from Zod schemas
 type MessageContent = z.infer<typeof MessageContentSchema>;
 type ToolCall = z.infer<typeof ToolCallSchema>;
 type BaseMessage = z.infer<typeof BaseMessageSchema>;
-type ToolResult = z.infer<typeof ToolResultSchema>;
+type ToolResult = Extract<NormalizedToolResult, { kind: 'success' }>;
 
 class TravelAssistantAgent {
-    private model: ChatAnthropic;
+    private model!: ChatAnthropic;
     private tools: DynamicStructuredTool[];
     private memory: MemorySaver;
     private graph: any;
     private isInitialized: boolean = false;
-    private contextManager: ContextManager;
+    private initializationPromise: Promise<void> | null = null;
+    private contextManager!: ContextManager;
 
     // Singleton
     private static instance: TravelAssistantAgent;
 
     private constructor() {
-        this.model = new ChatAnthropic({
-            apiKey: config.anthropic_api_key,
-            model:  config.model_name,
-            streaming: true,
-            temperature: 0.5,
-            tags: ["travel-agent", "context-engineering", "optimized"],
-        });
-        
         this.tools = [];
         this.memory = new MemorySaver();
         this.graph = null;
-        this.contextManager = new ContextManager(this.model, {
-            maxHistoryMessages: 10,
-            enableSummarization: true,
-            summaryTriggerThreshold: 6,
-            enableMetadataExtraction: true,
-        });
     }
 
     static getInstance(): TravelAssistantAgent {
@@ -97,24 +77,50 @@ class TravelAssistantAgent {
      * Must be called before using the agent
      */
     async initialize(): Promise<void> {
-        if (this.isInitialized) {
-            console.warn("Agent already initialized");
-            return;
+        if (this.isInitialized) return;
+        if (this.initializationPromise) return this.initializationPromise;
+        this.initializationPromise = (async () => {
+            const model = new ChatAnthropic({
+                apiKey: config.anthropic_api_key,
+                model: config.model_name,
+                streaming: true,
+                temperature: 0.5,
+                tags: ["travel-agent", "context-engineering", "optimized"],
+            });
+            const contextManager = new ContextManager(model, {
+                maxHistoryMessages: 10,
+                enableSummarization: true,
+                summaryTriggerThreshold: 6,
+                enableMetadataExtraction: true,
+            });
+            const tools = await getAllTools();
+            assertReadOnlyTools(tools);
+            const graph = createAgent({
+                model,
+                tools,
+                checkpointer: this.memory,
+                systemPrompt: TRAVEL_ASSISTANT_PROMPT,
+                middleware: [createMiddleware({
+                    name: 'BoundedTravelContext',
+                    wrapModelCall: async (request, handler) => {
+                        const threadId = request.runtime.configurable?.thread_id;
+                        if (!threadId) return handler(request);
+                        const messages = await contextManager.prepareModelInput(request.messages, threadId);
+                        return handler({ ...request, messages });
+                    },
+                })],
+            });
+            this.tools = tools;
+            this.graph = graph;
+            this.model = model;
+            this.contextManager = contextManager;
+            this.isInitialized = true;
+        })();
+        try {
+            await this.initializationPromise;
+        } finally {
+            this.initializationPromise = null;
         }
-
-        // Load all tools (MCP + custom) from externalized module
-        this.tools = await getAllTools();
-
-        // Create the ReAct agent with optimized prompt
-        this.graph = createAgent({
-            model: this.model,
-            tools: this.tools,
-            checkpointer: this.memory,
-            systemPrompt: TRAVEL_ASSISTANT_PROMPT
-        });
-
-        this.isInitialized = true;
-        console.log(`Agent initialized with ${this.tools.length} tools`);
     }
 
     /**
@@ -126,37 +132,8 @@ class TravelAssistantAgent {
         }
     }
 
-    /**
-     * Prepare context for conversation
-     */
-    private async prepareContext(threadId: string): Promise<void> {
-        const state = await this.graph.getState({ configurable: { thread_id: threadId } });
-        const messages = state.values?.messages || [];
-
-        if (messages.length === 0) return;
-
-        // Extract metadata every 3 messages
-        if (this.contextManager.getMetadata(threadId) === undefined || messages.length % 3 === 0) {
-            console.log('[Agent] Extracting user metadata...');
-            await this.contextManager.extractMetadata(messages, threadId);
-        }
-
-        // Summarize if threshold reached
-        if (this.contextManager.shouldSummarize(messages.length)) {
-            console.log('[Agent] Creating conversation summary...');
-            await this.contextManager.summarizeHistory(messages, threadId);
-        }
-
-        // Log token usage
-        const tokenCount = this.contextManager.calculateMessageTokens(messages);
-        console.log(`[Agent] Current conversation: ${messages.length} messages, ~${tokenCount} tokens`);
-    }
-
     async invoke(message: string, threadId: string = "default") {
         this.ensureInitialized();
-        
-        // Prepare context before invoking
-        await this.prepareContext(threadId);
         
         const config = { 
             configurable: { thread_id: threadId },
@@ -181,7 +158,7 @@ class TravelAssistantAgent {
         })));
         
         // Check if we need to continue (if last message has tool calls but no content)
-        let lastMsg = result.messages[result.messages.length - 1];
+        const lastMsg = result.messages[result.messages.length - 1];
         if (lastMsg.tool_calls && !lastMsg.content) {
             console.log('Tool calls detected, continuing execution...');
             // Continue execution to get the final response after tool execution
@@ -228,70 +205,21 @@ class TravelAssistantAgent {
         return state;
     }
 
-    async approveAndContinue(threadId: string = "default") {
-        this.ensureInitialized();
-        const config = { configurable: { thread_id: threadId } };
-        
-        try {
-            const stream = await this.graph.stream(null, config, { streamMode: "values" });
-            let finalResponse = "";
-            
-            for await (const chunk of stream) {
-                console.log('Continue stream chunk:', JSON.stringify(chunk, null, 2));
-                
-                // LangChain v1: node name changed from 'agent' to 'model'
-                const nodeMessages = chunk.model?.messages || chunk.agent?.messages;
-                if (nodeMessages) {
-                    for (const message of nodeMessages) {
-                        if (message.content && typeof message.content === 'string') {
-                            finalResponse = message.content;
-                            console.log('Found final response:', finalResponse);
-                        }
-                    }
-                }
-                
-                if (!finalResponse && chunk.messages) {
-                    const lastMessage = chunk.messages[chunk.messages.length - 1];
-                    if (lastMessage && (lastMessage.type === 'ai' || lastMessage._getType?.() === 'ai')) {
-                        finalResponse = lastMessage.content || "";
-                    }
-                }
-            }
-            
-            console.log('Final response to return:', finalResponse);
-            return finalResponse;
-        } catch (error) {
-            console.error('Error in approveAndContinue:', error);
-            throw error;
-        }
+    async approveAndContinue(threadId: string = "default"): Promise<string> {
+        void threadId;
+        throw new Error('Approval workflow is unavailable; no side-effecting tools are enabled');
     }
 
-    async invokeWithApproval(message: string, threadId: string = "default") {
-        this.ensureInitialized();
-        const config = { configurable: { thread_id: threadId } };
-        
-        const result = await this.graph.invoke(
-            { messages: [{ role: "user", content: message }] },
-            config
-        );
-
-        const state = await this.graph.getState(config);
-        
-        if (state.next && state.next.includes("tools")) {
-            const lastMessage = result.messages[result.messages.length - 1];
-            return {
-                needsApproval: true,
-                toolCalls: lastMessage.tool_calls || [],
-                threadId,
-                partialResponse: lastMessage.content || ""
-            };
-        }
-
-        return {
-            needsApproval: false,
-            response: result.messages[result.messages.length - 1].content,
-            threadId
-        };
+    async invokeWithApproval(message: string, threadId: string = "default"): Promise<{
+        needsApproval: boolean;
+        toolCalls?: ToolCall[];
+        threadId: string;
+        response?: string;
+        partialResponse?: string;
+    }> {
+        void message;
+        void threadId;
+        throw new Error('Approval workflow is unavailable; no side-effecting tools are enabled');
     }
 
     async *stream(message: string, threadId: string = "default") {
@@ -342,9 +270,6 @@ class TravelAssistantAgent {
      */
     async *streamStructured(message: string, threadId: string = "default") {
         this.ensureInitialized();
-        
-        // Prepare context before streaming
-        await this.prepareContext(threadId);
         
         const config = { 
             configurable: { thread_id: threadId },
@@ -540,49 +465,22 @@ class TravelAssistantAgent {
      * Process tool messages and yield events
      */
     private async *processToolMessage(msg: BaseMessage) {
-        console.log('[streamStructured] Tool message detected, name:', msg.name);
-        
-        // Handle errors - log but don't show to user for non-critical tools
-        if (typeof msg.content === 'string' && msg.content.startsWith('Error:')) {
-            console.error('[streamStructured] Tool returned error:', msg.name, msg.content);
-            // Don't show errors for optional/enhancement tools or data format errors
-            const optionalTools = ['get_destination_experiences', 'get_current_date'];
-            const isDataFormatError = msg.content.includes('Cannot read properties of undefined');
-            
-            if (optionalTools.includes(msg.name || '') || isDataFormatError) {
-                // Log a user-friendly message for data errors
-                if (isDataFormatError && msg.name) {
-                    console.warn(`[streamStructured] ${msg.name} returned invalid data format, skipping`);
-                }
-                return;
-            }
-            yield {
-                type: 'error' as const,
-                data: {
-                    error: `Tool ${msg.name || 'unknown'} failed`,
-                    details: msg.content.substring(0, 200)
-                }
-            };
-            return;
-        }
-        
         // Special handling for get_current_date tool (doesn't follow standard format)
         if (msg.name === 'get_current_date') {
-            console.log('[streamStructured] get_current_date result:', msg.content);
-            // Don't yield anything for this tool, it's used internally by the agent
             return;
         }
         
-        // Parse tool result
         const result = this.parseToolResult(msg);
         if (!result) {
             yield {
                 type: 'error' as const,
-                data: {
-                    error: `Tool ${msg.name || 'unknown'} failed`,
-                    details: typeof msg.content === 'string' ? msg.content.substring(0, 200) : 'Unknown error'
-                }
+                data: { error: `Tool ${msg.name || 'unknown'} failed` }
             };
+            return;
+        }
+        const schema = msg.name === 'search_flights' ? FlightOffer : msg.name === 'search_hotels' ? HotelOffer : msg.name === 'search_tours_activities' ? ActivityOffer : null;
+        if (schema && !result.data.every((record) => schema.safeParse(record).success)) {
+            yield { type: 'error' as const, data: { error: `Tool ${msg.name} returned invalid data` } };
             return;
         }
         
@@ -607,42 +505,33 @@ class TravelAssistantAgent {
      * Parse tool result from message content with Zod validation
      */
     private parseToolResult(msg: BaseMessage): ToolResult | null {
-        try {
-            const parsed = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content;
-            
-            // Validate with Zod schema
-            const validationResult = ToolResultSchema.safeParse(parsed);
-            
-            if (validationResult.success) {
-                return validationResult.data;
-            } else {
-                console.error('[streamStructured] Tool result validation failed:', validationResult.error.format());
-                return null;
-            }
-        } catch (e) {
-            console.error('[streamStructured] Failed to parse tool result as JSON:', e);
-            return null;
-        }
+        const normalized = normalizeToolResult(msg);
+        return normalized.kind === 'success' ? normalized : null;
     }
 
     /**
      * Transform tool result to UI component event
      */
     private transformToUIComponent(toolName: string, result: ToolResult): any | null {
-        if (toolName === 'search_tours_activities' && result.success && result.data) {
+        if (toolName === 'search_tours_activities' && result.data.length > 0) {
             return {
                 type: 'ui_component' as const,
                 data: {
                     component: 'ActivityList',
                     props: {
-                        activities: result.data,
-                        totalAvailable: result.meta?.totalAvailable || result.data.length
+                        activities: result.data.map((item) => {
+                            const activity = ActivityOffer.parse(item);
+                            const amount = activity.price?.amount;
+                            const hasPrice = amount !== undefined && Number.isFinite(Number(amount)) && !!activity.price?.currencyCode;
+                            return { ...activity, price: hasPrice ? activity.price : undefined };
+                        }),
+                        totalAvailable: result.meta?.totalAvailable ?? result.data.length
                     }
                 }
             };
         }
         
-        if (toolName === 'search_flights' && result.success && result.data && result.data.length > 0) {
+        if (toolName === 'search_flights' && result.data.length > 0) {
             return {
                 type: 'ui_component' as const,
                 data: {
@@ -652,8 +541,7 @@ class TravelAssistantAgent {
             };
         }
         
-        if (toolName === 'search_hotels' && result.success && result.data && Array.isArray(result.data) && result.data.length > 0) {
-            console.log('[streamStructured] Processing hotels, count:', result.data.length);
+        if (toolName === 'search_hotels' && result.data.length > 0) {
             return {
                 type: 'ui_component' as const,
                 data: {
@@ -670,21 +558,14 @@ class TravelAssistantAgent {
      * Transform Amadeus flight data to UI format
      */
     private transformFlightsData(data: any[]): any[] {
-        if (!data || !Array.isArray(data)) {
-            console.warn('[transformFlightsData] Invalid data received:', data);
-            return [];
-        }
         return data
-            .filter((offer: any) => offer?.itineraries && Array.isArray(offer.itineraries) && offer.itineraries.length > 0)
+            .map((offer) => FlightOffer.parse(offer))
             .slice(0, 3)
             .map((offer: any) => ({
                 id: offer.id,
-                price: {
-                    amount: parseFloat(offer.price?.total || offer.price?.grandTotal || '0'),
-                    currency: offer.price?.currency || 'EUR'
-                },
+                price: availablePrice(offer.price),
                 outbound: this.transformItinerary(offer.itineraries[0], offer.validatingAirlineCodes),
-                inbound: this.transformItinerary(offer.itineraries?.[1], offer.validatingAirlineCodes)
+                inbound: offer.itineraries[1] ? this.transformItinerary(offer.itineraries[1], offer.validatingAirlineCodes) : undefined,
             }));
     }
 
@@ -692,34 +573,27 @@ class TravelAssistantAgent {
      * Transform flight itinerary
      */
     private transformItinerary(itinerary: any, validatingCodes: string[]): any {
-        if (!itinerary || !itinerary.segments || !Array.isArray(itinerary.segments) || itinerary.segments.length === 0) {
-            return {};
-        }
-        
         const firstSegment = itinerary.segments[0];
         const lastSegment = itinerary.segments[itinerary.segments.length - 1];
         
         return {
             departure: {
                 airport: {
-                    code: firstSegment?.departure?.iataCode || '',
-                    name: firstSegment?.departure?.iataCode || ''
+                    code: firstSegment.departure.iataCode,
                 },
-                time: firstSegment?.departure?.at || ''
+                time: firstSegment.departure.at
             },
             arrival: {
                 airport: {
-                    code: lastSegment?.arrival?.iataCode || '',
-                    name: lastSegment?.arrival?.iataCode || ''
+                    code: lastSegment.arrival.iataCode,
                 },
-                time: lastSegment?.arrival?.at || ''
+                time: lastSegment.arrival.at
             },
             airline: {
-                code: firstSegment?.carrierCode || '',
-                name: validatingCodes?.[0] || firstSegment?.carrierCode || ''
+                code: firstSegment.carrierCode,
             },
-            duration: itinerary.duration?.replace('PT', '').replace('H', 'h ').replace('M', 'm') || '',
-            stops: (itinerary.segments?.length || 1) - 1
+            duration: itinerary.duration?.replace('PT', '').replace('H', 'h ').replace('M', 'm'),
+            stops: itinerary.segments.length - 1
         };
     }
 
@@ -727,32 +601,24 @@ class TravelAssistantAgent {
      * Transform Amadeus hotel data to UI format
      */
     private transformHotelsData(data: any[]): any[] {
-        if (!data || !Array.isArray(data)) {
-            console.warn('[transformHotelsData] Invalid data received:', data);
-            return [];
-        }
-        return data.slice(0, 4).map((hotelOffer: any) => {
-            console.log('[streamStructured] Hotel offer:', hotelOffer.hotel?.name);
+        return data.map((offer) => HotelOffer.parse(offer)).filter((offer) => !!offer.hotel.name).slice(0, 4).map((hotelOffer) => {
+            const rawRating = hotelOffer.hotel.rating;
+            const rating = rawRating === undefined ? undefined : Number(rawRating);
             return {
-                id: hotelOffer.hotel?.hotelId || hotelOffer.id,
-                name: hotelOffer.hotel?.name || 'Hotel',
-                rating: 4,
+                id: hotelOffer.hotel.hotelId || hotelOffer.id,
+                name: hotelOffer.hotel.name,
+                rating: Number.isFinite(rating) && rating! >= 0 && rating! <= 5 ? rating : undefined,
                 address: {
-                    street: hotelOffer.hotel?.address?.lines?.[0] || '',
-                    city: hotelOffer.hotel?.cityCode || '',
-                    postalCode: hotelOffer.hotel?.address?.postalCode || ''
+                    street: hotelOffer.hotel.address?.lines?.[0],
+                    city: hotelOffer.hotel.cityCode,
+                    postalCode: hotelOffer.hotel.address?.postalCode
                 },
-                location: {
-                    latitude: hotelOffer.hotel?.latitude || 0,
-                    longitude: hotelOffer.hotel?.longitude || 0
-                },
-                description: hotelOffer.offers?.[0]?.room?.description?.text || 'Comfortable hotel room',
-                amenities: ['WiFi', 'Air Conditioning', 'Room Service'],
-                price: {
-                    amount: parseFloat(hotelOffer.offers?.[0]?.price?.total || '0'),
-                    currency: hotelOffer.offers?.[0]?.price?.currency || 'EUR'
-                },
-                images: ['https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800']
+                location: hotelOffer.hotel.latitude !== undefined && hotelOffer.hotel.longitude !== undefined
+                    ? { latitude: hotelOffer.hotel.latitude, longitude: hotelOffer.hotel.longitude } : undefined,
+                description: hotelOffer.offers?.[0]?.room?.description?.text,
+                amenities: hotelOffer.hotel.amenities,
+                price: availablePrice(hotelOffer.offers?.[0]?.price),
+                images: undefined,
             };
         });
     }
@@ -761,17 +627,17 @@ class TravelAssistantAgent {
      * Create a human-readable summary of tool results
      */
     private summarizeToolResult(toolName: string, result: any): string {
-        if (!result || !result.success) return 'No results found';
+        if (!result || result.kind !== 'success') return 'Tool unavailable';
 
         switch (toolName) {
             case 'search_cities':
-                return `Found ${result.data?.length || 0} cities`;
+                return `Found ${result.data.length} cities`;
             case 'search_tours_activities':
-                return `Found ${result.meta?.totalAvailable || result.data?.length || 0} activities`;
+                return `Found ${result.meta?.totalAvailable ?? result.data.length} activities`;
             case 'search_hotels':
-                return `Found ${result.data?.length || 0} hotels`;
+                return `Found ${result.data.length} hotels`;
             case 'search_flights':
-                return `Found ${result.data?.length || 0} flights`;
+                return `Found ${result.data.length} flights`;
             default:
                 return 'Results received';
         }

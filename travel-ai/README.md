@@ -1,4 +1,21 @@
-# Next.js 15 Application
+# Travel AI (Next.js 15)
+
+The deployable application root is `travel-ai/`, not the repository root. Use Node 20.x and the pinned `pnpm@9.15.0` through Corepack. Install with `pnpm install --frozen-lockfile`, then run `pnpm check` before deployment. This gate runs offline tests; `pnpm test:live` separately requires provider credentials and a running test server, and must not be reported as passed unless actually run. Set Node 20 in the Vercel project settings; `NODE_VERSION` in `vercel.json` does not select the build runtime. Record the deployed commit SHA and `node --version` / `pnpm --version` from the preview build logs.
+
+### Feature configuration
+
+Copy `.env.example` to a local, untracked environment file; never commit credentials. Server-only values must not use the `NEXT_PUBLIC_` prefix. Configure each enabled feature explicitly:
+
+| Feature | Required values | Optional values |
+| --- | --- | --- |
+| Auth | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | — |
+| Chat | `ANTHROPIC_API_KEY`, `AMADEUS_URL`, `AMADEUS_BEARER_TOKEN` | `MODEL_NAME` (validated Claude model; defaults to the pinned example) |
+| Retrieval | `OPENAI_API_KEY`, `QDRANT_URL` | `QDRANT_API_KEY` only for local HTTP; required for hosted HTTPS, `COHERE_API_KEY` for reranking |
+| Persistence | `POSTGRES_URL` (runtime role); `POSTGRES_URL_NON_POOLING` for migrations and durable orchestration | `POSTGRES_CA_CERT` (migration trust root) |
+
+Set preview and production variables separately in Vercel; preview must use test-provider projects, a test Qdrant collection and an isolated database, not production credentials. Build-time `NEXT_PUBLIC_*` values are embedded into browser assets, so redeploy after changing them. Do not put service-role keys, database URLs or provider secrets in public variables. Feature entry points reject blank or invalid settings with a generic configuration error before contacting the provider. Localhost HTTP endpoints are only accepted outside production.
+
+For a clean preview, prepare the database schema in the isolated preview database using the migration role, create the Qdrant collection used by retrieval and populate it with test data, and configure Supabase Auth redirect URLs for the preview hostname. Enable and verify the intended Supabase RLS/access policies for the application tables; an anon key alone does not define data isolation. Then run an authenticated chat, retrieval and persistence smoke test using test accounts and test services. A successful build does not substitute for these checks.
 
 A modern, full-stack Next.js application built with TypeScript, Tailwind CSS, and Zustand for state management.
 
@@ -68,7 +85,7 @@ src/                    # Source files
 
 - **Use PowerShell or Windows Terminal.** Corepack comes bundled with Node.js 18+, so enable it once with `corepack enable pnpm` (run as administrator if you hit permission errors).
 - **Install dependencies:** `pnpm install`
-- **Apply database schema:** `pnpm db:push` (internally uses `cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit push`, so it works the same on Windows, macOS, and Linux). Re-run this after editing Drizzle migrations.
+- **Apply database schema in an isolated development database:** `pnpm db:migrate`. TLS certificates are verified; configure the provider CA with `POSTGRES_CA_CERT` or Node's trusted CA store where needed. Do not disable TLS validation.
 - **Start developing:** `pnpm dev` and open `http://localhost:3000`
 - **Troubleshooting:** If PowerShell refuses scripts, right-click the terminal and choose “Run as administrator”, then execute `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` once.
 
@@ -113,6 +130,12 @@ The application uses Zustand for state management with the following stores:
 - **App Store** - Application-wide settings (theme, sidebar state)
 
 ## Deployment
+
+### Database migration safety
+
+Schema migration is a separate, reviewed release step; it is not run by `next build` or application startup. Use `POSTGRES_URL_NON_POOLING` with a migration-specific database role and a certificate trusted for that hostname. The runtime uses `POSTGRES_URL` with a separate, least-privilege role. Before production migration, review generated SQL and take a restorable database backup/snapshot. Test both forward migration and a recovery from backup against a clone; Drizzle migrations have no automatic rollback. Do not use `db:push` against production. The orchestration migration creates only the ownership/usage tables, while the LangGraph Postgres checkpointer sets up its own checkpoint tables at startup.
+
+The daily `/api/cron/prune-orchestration` job requires `CRON_SECRET`; it deletes only expired conversations and matching checkpoints after 30 days. Schedule and verify this job in the deployed environment before relying on the retention policy.
 
 ### Vercel (Recommended)
 

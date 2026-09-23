@@ -6,12 +6,14 @@
 
 import OpenAI from 'openai';
 import type { IEmbeddingsService } from '@/lib/domain/embeddings/service';
+import { validateFeature } from '@/lib/config/feature-env';
 
 export class OpenAIEmbeddingsService implements IEmbeddingsService {
   private client: OpenAI;
   private model: string = 'text-embedding-3-small'; // 1536 dimensions
 
   constructor() {
+    validateFeature('retrieval');
     const apiKey = process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
@@ -35,8 +37,7 @@ export class OpenAIEmbeddingsService implements IEmbeddingsService {
 
       return embedding;
     } catch (error) {
-      console.error('❌ Failed to generate embedding:', error);
-      throw new Error(`Failed to generate embedding: ${error}`);
+      throw new Error('Embedding service unavailable');
     }
   }
 
@@ -54,8 +55,7 @@ export class OpenAIEmbeddingsService implements IEmbeddingsService {
 
       return embeddings;
     } catch (error) {
-      console.error('❌ Failed to generate batch embeddings:', error);
-      throw new Error(`Failed to generate batch embeddings: ${error}`);
+      throw new Error('Embedding service unavailable');
     }
   }
 }

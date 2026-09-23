@@ -25,13 +25,12 @@ export function FlightCard({ flight }: FlightCardProps) {
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                     </svg>
-                    <span className="font-semibold">Round Trip</span>
+                    <span className="font-semibold">{flight.inbound ? 'Round trip' : 'One way'}</span>
                 </div>
                 <div className="text-right">
                     <div className="text-2xl font-bold text-white">
-                        {flight.price.currency} {flight.price.amount.toFixed(0)}
+                        {flight.price ? `${flight.price.currency} ${flight.price.amount.toFixed(0)}` : 'Price unavailable'}
                     </div>
-                    <div className="text-xs text-blue-100">for 2 passengers</div>
                 </div>
             </div>
 
@@ -47,7 +46,7 @@ export function FlightCard({ flight }: FlightCardProps) {
                     <div className="flex-1">
                         <div className="text-3xl font-bold text-gray-900">{formatTime(flight.outbound.departure.time)}</div>
                         <div className="text-sm font-medium text-gray-700 mt-1">{flight.outbound.departure.airport.code}</div>
-                        <div className="text-xs text-gray-500">{flight.outbound.departure.airport.name}</div>
+                        {flight.outbound.departure.airport.name && <div className="text-xs text-gray-500">{flight.outbound.departure.airport.name}</div>}
                     </div>
 
                     {/* Flight Info */}
@@ -81,12 +80,12 @@ export function FlightCard({ flight }: FlightCardProps) {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>
-                    <span>{flight.outbound.airline.name} ({flight.outbound.airline.code})</span>
+                    <span>{flight.outbound.airline.name || flight.outbound.airline.code || 'Airline unavailable'}</span>
                 </div>
             </div>
 
             {/* Inbound Flight */}
-            <div className="p-6">
+            {flight.inbound && <div className="p-6">
                 <div className="flex items-center gap-2 mb-4">
                     <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
                     <span className="text-sm font-semibold text-gray-700">Return • {formatDate(flight.inbound.departure.time)}</span>
@@ -133,7 +132,7 @@ export function FlightCard({ flight }: FlightCardProps) {
                     </svg>
                     <span>{flight.inbound.airline.name} ({flight.inbound.airline.code})</span>
                 </div>
-            </div>
+            </div>}
 
             {/* Booking Button */}
             <div className="px-6 pb-6">
@@ -147,7 +146,7 @@ export function FlightCard({ flight }: FlightCardProps) {
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                         </svg>
-                        Book this flight
+                        Search this route
                         <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>

@@ -140,7 +140,7 @@ async function fetchAllTrips(): Promise<Array<{ id: string; payload: TripVectorP
 
   // Scroll through all points
   const allTrips: Array<{ id: string; payload: TripVectorPayload }> = [];
-  let offset: string | number | null = null;
+  let offset: string | number | Record<string, unknown> | null = null;
 
   while (true) {
     const result = await client.scroll(collection, {

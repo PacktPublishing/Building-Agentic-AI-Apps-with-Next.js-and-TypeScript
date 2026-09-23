@@ -89,8 +89,8 @@ async function testSwarmStream() {
 
             console.log(`[${update.timestamp}] Node: ${update.node}`);
 
-            if (update.messages && update.messages.length > 0) {
-                const lastMsg = update.messages[update.messages.length - 1];
+            if (update.data.messages && update.data.messages.length > 0) {
+                const lastMsg = update.data.messages[update.data.messages.length - 1];
                 console.log(`  → Message type: ${lastMsg.type}`);
                 if (lastMsg.content) {
                     console.log(`  → Content preview: ${lastMsg.content.substring(0, 100)}...`);

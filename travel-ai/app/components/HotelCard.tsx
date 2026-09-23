@@ -34,11 +34,11 @@ export function HotelCard({ hotel }: HotelCardProps) {
                         unoptimized
                     />
                     {/* Rating Badge */}
-                    <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg">
+                    {hotel.rating !== undefined && <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg">
                         <div className="flex items-center gap-1">
                             {renderStars(hotel.rating)}
                         </div>
-                    </div>
+                    </div>}
                 </div>
             )}
 
@@ -49,18 +49,18 @@ export function HotelCard({ hotel }: HotelCardProps) {
                 </h3>
 
                 {/* Address */}
-                <div className="flex items-start gap-2 text-sm text-gray-600 mb-3">
+                {(hotel.address.street || hotel.address.city) && <div className="flex items-start gap-2 text-sm text-gray-600 mb-3">
                     <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    <span>{hotel.address.street}, {hotel.address.city}</span>
-                </div>
+                    <span>{[hotel.address.street, hotel.address.city].filter(Boolean).join(', ')}</span>
+                </div>}
 
                 {/* Description */}
-                <p className="text-sm text-gray-700 mb-4 line-clamp-2">
+                {hotel.description && <p className="text-sm text-gray-700 mb-4 line-clamp-2">
                     {hotel.description}
-                </p>
+                </p>}
 
                 {/* Amenities */}
                 {hotel.amenities && hotel.amenities.length > 0 && (
@@ -90,7 +90,7 @@ export function HotelCard({ hotel }: HotelCardProps) {
                         <div>
                             <div className="text-xs text-gray-500 mb-1">Price per night</div>
                             <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                                {hotel.price.currency} {hotel.price.amount.toFixed(0)}
+                                {hotel.price ? `${hotel.price.currency} ${hotel.price.amount.toFixed(0)}` : 'Price unavailable'}
                             </div>
                         </div>
                         
@@ -124,7 +124,7 @@ export function HotelCard({ hotel }: HotelCardProps) {
 
                     {/* Booking Button */}
                     <a
-                        href={`https://www.google.com/travel/hotels?q=${encodeURIComponent(hotel.name + ' ' + hotel.address.city)}`}
+                        href={`https://www.google.com/travel/hotels?q=${encodeURIComponent(hotel.name + ' ' + (hotel.address.city || ''))}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="block w-full py-3 px-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl text-center group"
@@ -133,7 +133,7 @@ export function HotelCard({ hotel }: HotelCardProps) {
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                             </svg>
-                            Book this hotel
+                            Search this hotel
                             <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                             </svg>
