@@ -1,6 +1,6 @@
 # Travel AI (Next.js 15)
 
-The deployable application root is `travel-ai/`, not the repository root. Use Node 20.x and the pinned `pnpm@9.15.0` through Corepack. Install with `pnpm install --frozen-lockfile`, then run `pnpm check` before deployment. This gate runs offline tests; `pnpm test:live` separately requires provider credentials and a running test server, and must not be reported as passed unless actually run. Set Node 20 in the Vercel project settings; `NODE_VERSION` in `vercel.json` does not select the build runtime. Record the deployed commit SHA and `node --version` / `pnpm --version` from the preview build logs.
+The deployable application root is `travel-ai/`, not the repository root. Use Node 20.x and the pinned `pnpm@10.14.0` through Corepack. Install with `pnpm install --frozen-lockfile`, then run `pnpm check` before deployment. This gate runs offline tests; `pnpm test:live` separately requires provider credentials and a running test server, and must not be reported as passed unless actually run. Set Node 20 in the Vercel project settings; `NODE_VERSION` in `vercel.json` does not select the build runtime. Record the deployed commit SHA and `node --version` / `pnpm --version` from the preview build logs.
 
 ### Feature configuration
 

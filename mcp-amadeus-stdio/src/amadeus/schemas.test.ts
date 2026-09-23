@@ -21,6 +21,7 @@ test("invalid travel values fail schema validation", () => {
   assert.equal(ToursActivitiesSchema.safeParse({ latitude: 91, longitude: 2 }).success, false);
   assert.equal(HotelRatingsSchema.safeParse({ hotelIds: [] }).success, false);
   assert.equal(HotelRatingsSchema.safeParse({ hotelIds: ["bad"] }).success, false);
+  assert.equal(HotelRatingsSchema.safeParse({ hotelIds: ["HOTEL001"], north: 10 }).success, false);
   assert.equal(FlightSearchSchema.safeParse({ origin: "CDG", destination: "LHR", departureDate: "2026-10-10" }).success, true);
 });
 

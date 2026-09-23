@@ -120,7 +120,7 @@ export const CitySearchSchema = z.object({
 export const HotelRatingsSchema = z.object({
   hotelIds: z.array(z.string().regex(/^[A-Z0-9]{8}$/, "Expected an eight-character Amadeus hotel ID"))
     .min(1).max(3).describe("One to three Amadeus hotel IDs from a hotel search"),
-});
+}).strict();
 
 export const ToursActivitiesSchema = z.object({
   latitude: Latitude.describe("Latitude of the location"),
