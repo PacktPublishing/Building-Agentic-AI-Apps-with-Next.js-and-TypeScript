@@ -15,11 +15,11 @@ import { ChatAnthropic } from "@langchain/anthropic";
 import { StateGraph, Annotation, END, START } from "@langchain/langgraph";
 import { MemorySaver } from "@langchain/langgraph";
 import { BaseMessage, HumanMessage, AIMessage, SystemMessage } from "@langchain/core/messages";
-import { z } from "zod";
 import { config } from "../../../config";
 import { createFlightAgent } from "./flight-agent";
 import { createHotelAgent } from "./hotel-agent";
 import { createActivityAgent } from "./activity-agent";
+import { extractSpecialistReport, parseSupervisorDecision, type AgentName } from './supervisor-contract';
 
 // State annotation for the supervisor graph
 const SupervisorState = Annotation.Root({
@@ -32,8 +32,17 @@ const SupervisorState = Annotation.Root({
         default: () => null,
     }),
     agentOutputs: Annotation<Record<string, string>>({
-        reducer: (curr, update) => ({ ...curr, ...update }),
+        // An explicit empty update starts a new turn; worker reports then merge.
+        reducer: (curr, update) => Object.keys(update).length === 0 ? {} : ({ ...curr, ...update }),
         default: () => ({}),
+    }),
+    agentTasks: Annotation<Record<string, string>>({
+        reducer: (_, update) => update,
+        default: () => ({}),
+    }),
+    currentRequest: Annotation<string>({
+        reducer: (_, update) => update,
+        default: () => '',
     }),
     pendingAgents: Annotation<string[]>({
         reducer: (_, update) => update,
@@ -90,27 +99,27 @@ Format your response in a user-friendly way with clear sections for each type of
 /**
  * Create the Travel Supervisor multi-agent system
  */
-export async function createTravelSupervisor() {
-    const model = new ChatAnthropic({
+export async function createTravelSupervisor(dependencies: {
+    model?: { invoke(messages: BaseMessage[]): Promise<{ content: unknown }> };
+    agents?: Record<string, any>;
+} = {}) {
+    const model = dependencies.model ?? new ChatAnthropic({
         apiKey: config.anthropic_api_key,
         model: config.model_name,
         temperature: 0.3,
     });
 
     // Initialize specialized agents
-    const flightAgentConfig = await createFlightAgent();
-    const hotelAgentConfig = await createHotelAgent();
-    const activityAgentConfig = await createActivityAgent();
-
-    const agents: Record<string, any> = {
-        FlightAgent: flightAgentConfig,
-        HotelAgent: hotelAgentConfig,
-        ActivityAgent: activityAgentConfig,
+    const agents: Record<string, any> = dependencies.agents ?? {
+        FlightAgent: await createFlightAgent(),
+        HotelAgent: await createHotelAgent(),
+        ActivityAgent: await createActivityAgent(),
     };
 
     // Node: Supervisor decision making
     async function supervisorNode(state: SupervisorStateType): Promise<Partial<SupervisorStateType>> {
-        const lastMessage = state.messages[state.messages.length - 1];
+        const latestHuman = [...state.messages].reverse().find((message) => message._getType() === 'human');
+        const currentRequest = typeof latestHuman?.content === 'string' ? latestHuman.content : '';
 
         // Build context from conversation
         const conversationContext = state.messages
@@ -131,28 +140,33 @@ export async function createTravelSupervisor() {
             // Extract JSON from response (handle markdown code blocks)
             const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
             const jsonStr = jsonMatch[1] || content;
-            const decision = JSON.parse(jsonStr.trim());
+            const decision = parseSupervisorDecision(jsonStr.trim());
 
-            if (decision.directResponse) {
+            if ('directResponse' in decision && decision.directResponse) {
                 return {
                     finalResponse: decision.directResponse,
                     pendingAgents: [],
-                    messages: [new AIMessage(`[Supervisor] ${decision.reasoning}`)],
+                    agentTasks: {},
+                    agentOutputs: {},
+                    currentRequest,
+                    messages: [new AIMessage(decision.directResponse)],
                 };
             }
 
             return {
-                pendingAgents: decision.agents || [],
-                messages: [new AIMessage(`[Supervisor] Delegating to: ${decision.agents?.join(", ")}. Reasoning: ${decision.reasoning}`)],
-                agentOutputs: Object.fromEntries(
-                    (decision.agents || []).map((a: string) => [a, decision.taskForEachAgent?.[a] || ""])
-                ),
+                finalResponse: null,
+                pendingAgents: decision.agents,
+                agentTasks: decision.taskForEachAgent,
+                agentOutputs: {},
+                currentRequest,
             };
         } catch (error) {
-            console.error("[Supervisor] Failed to parse decision:", error);
             return {
                 finalResponse: "I apologize, but I encountered an issue processing your request. Could you please rephrase it?",
                 pendingAgents: [],
+                agentTasks: {},
+                agentOutputs: {},
+                currentRequest,
             };
         }
     }
@@ -167,30 +181,22 @@ export async function createTravelSupervisor() {
                 };
             }
 
-            const task = state.agentOutputs[agentName] || state.messages[state.messages.length - 1].content;
+            const task = state.agentTasks[agentName];
+            if (!task) return { agentOutputs: { [agentName]: 'Error: specialist task missing' } };
 
             try {
-                console.log(`[${agentName}] Starting task: ${task}`);
-
                 const result = await agentConfig.agent.invoke({
                     messages: [new HumanMessage(String(task))],
                 });
 
-                const lastAgentMessage = result.messages[result.messages.length - 1];
-                const output = typeof lastAgentMessage.content === "string"
-                    ? lastAgentMessage.content
-                    : JSON.stringify(lastAgentMessage.content);
-
-                console.log(`[${agentName}] Completed with output length: ${output.length}`);
+                const output = extractSpecialistReport(agentName as AgentName, result.messages);
 
                 return {
                     agentOutputs: { [agentName]: output },
-                    messages: [new AIMessage(`[${agentName}] ${output.substring(0, 500)}...`)],
                 };
             } catch (error) {
-                console.error(`[${agentName}] Error:`, error);
                 return {
-                    agentOutputs: { [agentName]: `Error: ${error}` },
+                    agentOutputs: { [agentName]: 'Error: specialist unavailable' },
                 };
             }
         };
@@ -202,10 +208,12 @@ export async function createTravelSupervisor() {
             return {}; // Already have a direct response
         }
 
-        const agentReports = Object.entries(state.agentOutputs)
+        const agentReports = state.pendingAgents
+            .map((agent) => [agent, state.agentOutputs[agent]] as const)
             .filter(([_, output]) => output && !output.startsWith("Error:"))
             .map(([agent, output]) => `## ${agent} Report:\n${output}`)
             .join("\n\n");
+        const failedAgents = state.pendingAgents.filter((agent) => !state.agentOutputs[agent] || state.agentOutputs[agent].startsWith('Error:'));
 
         if (!agentReports) {
             return {
@@ -213,11 +221,11 @@ export async function createTravelSupervisor() {
             };
         }
 
-        const userRequest = state.messages.find((m) => m._getType() === "human")?.content || "";
+        const userRequest = state.currentRequest;
 
         const response = await model.invoke([
             new SystemMessage(SYNTHESIS_PROMPT),
-            new HumanMessage(`User's original request: ${userRequest}\n\nSpecialist reports:\n${agentReports}\n\nProvide a unified response.`),
+            new HumanMessage(`User's original request: ${userRequest}\n\nSpecialist reports:\n${agentReports}\n\nUnavailable specialists: ${failedAgents.join(', ') || 'none'}. Do not imply unavailable specialists returned results.\n\nProvide a unified response.`),
         ]);
 
         const finalResponse = typeof response.content === "string"

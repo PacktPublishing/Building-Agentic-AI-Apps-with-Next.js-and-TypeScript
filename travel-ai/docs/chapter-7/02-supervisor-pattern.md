@@ -1,5 +1,7 @@
 # Implementing the Supervisor Pattern
 
+> Source mapping (current implementation): `ai/orchestration/supervisor/travel-supervisor.ts` owns the graph and resets `agentTasks`, `agentOutputs`, `pendingAgents`, and `finalResponse` on each turn. `ai/orchestration/supervisor/supervisor-contract.ts` validates routing decisions and the `report_*_results` tool messages. `app/api/orchestration/supervisor/route.ts` is the HTTP entry point. The illustrative snippets below predate the current LangChain API; use the linked source files, not the snippets, when copying code.
+
 ## Overview
 
 The Supervisor pattern implements a hierarchical multi-agent system where a central supervisor agent coordinates specialized worker agents. This pattern is ideal when you need:

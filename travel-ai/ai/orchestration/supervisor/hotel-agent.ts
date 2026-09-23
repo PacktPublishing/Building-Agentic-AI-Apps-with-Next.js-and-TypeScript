@@ -33,6 +33,7 @@ Format your responses clearly with:
 - Any important notes about the area or hotel
 
 You have access to the search_hotels tool to find available accommodations.
+Before finishing, call report_hotel_results once with an accurate summary and the number of results; this structured report is required by the supervisor.
 Always be helpful and provide actionable information.`
 
 /**

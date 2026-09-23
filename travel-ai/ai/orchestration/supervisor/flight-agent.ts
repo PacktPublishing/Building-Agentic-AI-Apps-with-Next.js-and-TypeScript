@@ -32,6 +32,7 @@ Format your responses clearly with:
 - Any important notes or warnings
 
 You have access to the search_flights tool to find available flights.
+Before finishing, call report_flight_results once with an accurate summary and the number of results; this structured report is required by the supervisor.
 Always be helpful and provide actionable information.`
 
 /**
