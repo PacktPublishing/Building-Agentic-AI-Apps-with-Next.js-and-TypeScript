@@ -22,9 +22,17 @@ cp .env.example .env
 AMADEUS_CLIENT_ID=your_amadeus_client_id_here
 AMADEUS_CLIENT_SECRET=your_amadeus_client_secret_here
 AMADEUS_HOSTNAME=test
+MCP_BEARER_TOKEN=replace_with_a_generated_token
+MCP_ALLOWED_ORIGINS=http://localhost:3000
 ```
 
 3. Get your credentials from [Amadeus for Developers](https://developers.amadeus.com/)
+
+Run `node scripts/generate-token.js` to create the shared MCP bearer token. Keep the printed token out of source control and logs. Blank credentials or an unknown `AMADEUS_HOSTNAME` are rejected when an API-backed tool first runs. Supported host values are `test`, `test.api.amadeus.com`, `production`, and `api.amadeus.com`; the default is `test`. Tool listing does not initialize the Amadeus client.
+
+The MCP endpoint is `/api/mcp` using Streamable HTTP. Every GET and POST requires the bearer token. Browser requests carrying `Origin` must match `MCP_ALLOWED_ORIGINS`; native clients without `Origin` still authenticate. This shared-token example authorizes a client application, not an individual end user, and is not a full MCP OAuth implementation. The legacy `/api/sse` and `/api/message` paths are disabled.
+
+For deployment, select `mcp-amadeus` as the project root directory and set the server-only values independently for Preview and Production. Do not place these secrets in `NEXT_PUBLIC_` variables. Redeploy after changing environment values. Validate the Preview URL with a real MCP SDK client or Inspector before promoting it; an offline build cannot prove Amadeus access. Keep `MCP_VERBOSE_LOGS` disabled outside explicitly enabled local development.
 
 ## Installation
 
