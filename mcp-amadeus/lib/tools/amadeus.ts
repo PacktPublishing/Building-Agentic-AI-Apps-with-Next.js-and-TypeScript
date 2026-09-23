@@ -247,12 +247,13 @@ export class AmadeusClient {
   async getHotelRatings(params: HotelRatingsParams) {
     try {
       const response = await this.client.ereputation.hotelSentiments.get({
-        hotelIds: params.hotelIds,
+        hotelIds: params.hotelIds.join(","),
       });
 
       return {
         success: true,
-        data: response.data,
+        data: response.data ?? [],
+        status: response.data?.length ? "available" : "unavailable",
         meta: response.meta,
       };
     } catch {

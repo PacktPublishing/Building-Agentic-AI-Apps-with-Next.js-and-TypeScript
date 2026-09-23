@@ -57,8 +57,8 @@ export const CitySearchSchema = z.object({
 
 // Hotel Ratings uses hotel IDs, not geographic bounds.
 export const HotelRatingsSchema = z.object({
-  hotelIds: z.string().trim().min(1).regex(/^[A-Z0-9]+(?:,[A-Z0-9]+)*$/)
-    .describe("Comma-separated hotel IDs returned by hotel search"),
+  hotelIds: z.array(z.string().regex(/^[A-Z0-9]{8}$/)).min(1).max(3)
+    .describe("One to three Amadeus hotel IDs returned by hotel search"),
 }).strict();
 
 // Tours and activities schema
@@ -115,7 +115,7 @@ export interface CitySearchParams {
 }
 
 export interface HotelRatingsParams {
-  hotelIds: string;
+  hotelIds: string[];
 }
 
 export interface ToursActivitiesParams {

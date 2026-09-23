@@ -10,11 +10,13 @@ test('Hotel Ratings sends only hotel IDs and rejects geographic bounds', async (
     return { data: [], meta: {} };
   } } } };
   const client = new AmadeusClient({ clientId: 'synthetic-id', clientSecret: 'synthetic-secret', hostname: 'test' }, sdk as never);
-  const input = HotelRatingsSchema.parse({ hotelIds: 'H1,H2' });
+  const input = HotelRatingsSchema.parse({ hotelIds: ['HOTEL001', 'HOTEL002'] });
   const result = await client.getHotelRatings(input);
-  assert.deepEqual(calls, [{ hotelIds: 'H1,H2' }]);
+  assert.deepEqual(calls, [{ hotelIds: 'HOTEL001,HOTEL002' }]);
   assert.deepEqual(result.data, []);
-  assert.throws(() => HotelRatingsSchema.parse({ hotelIds: '' }));
+  assert.equal(result.status, 'unavailable');
+  assert.throws(() => HotelRatingsSchema.parse({ hotelIds: [] }));
+  assert.throws(() => HotelRatingsSchema.parse({ hotelIds: ['BAD'] }));
   assert.throws(() => HotelRatingsSchema.parse({ north: 1, south: 0, east: 1, west: 0 }));
 });
 
