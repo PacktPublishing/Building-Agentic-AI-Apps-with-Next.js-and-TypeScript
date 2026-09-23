@@ -8,7 +8,7 @@ import {
   AirlineSearchSchema,
   HotelSearchSchema,
   CitySearchSchema,
-  DestinationExperiencesSchema,
+  HotelRatingsSchema,
   ToursActivitiesSchema,
 } from "@/lib/types/amadeus";
 import { NextRequest } from "next/server";
@@ -233,20 +233,17 @@ const handler = createMcpHandler(
       }
     );
 
-    // Destination experiences tool
+    // Hotel Ratings is keyed by hotel IDs returned by a hotel search.
     server.tool(
-      "get_destination_experiences",
-      "Get destination experiences and hotel sentiments for a geographic area",
+      "get_hotel_ratings",
+      "Get hotel review sentiment by Amadeus hotel IDs; unavailable ratings return an empty list",
       {
-        north: DestinationExperiencesSchema.shape.north,
-        west: DestinationExperiencesSchema.shape.west,
-        south: DestinationExperiencesSchema.shape.south,
-        east: DestinationExperiencesSchema.shape.east,
+        hotelIds: HotelRatingsSchema.shape.hotelIds,
       },
       async (params) => {
         try {
-          const validatedParams = DestinationExperiencesSchema.parse(params);
-          const result = await getAmadeusClient().getDestinationExperiences(validatedParams);
+          const validatedParams = HotelRatingsSchema.parse(params);
+          const result = await getAmadeusClient().getHotelRatings(validatedParams);
           const outputStr = JSON.stringify(result);
           return {
             content: [

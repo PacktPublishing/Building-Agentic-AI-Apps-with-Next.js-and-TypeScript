@@ -1,6 +1,22 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { AmadeusClient, getAmadeusConfig } from "../lib/tools/amadeus";
+import { HotelRatingsSchema } from '../lib/types/amadeus';
+
+test('Hotel Ratings sends only hotel IDs and rejects geographic bounds', async () => {
+  const calls: unknown[] = [];
+  const sdk = { ereputation: { hotelSentiments: { get: async (params: unknown) => {
+    calls.push(params);
+    return { data: [], meta: {} };
+  } } } };
+  const client = new AmadeusClient({ clientId: 'synthetic-id', clientSecret: 'synthetic-secret', hostname: 'test' }, sdk as never);
+  const input = HotelRatingsSchema.parse({ hotelIds: 'H1,H2' });
+  const result = await client.getHotelRatings(input);
+  assert.deepEqual(calls, [{ hotelIds: 'H1,H2' }]);
+  assert.deepEqual(result.data, []);
+  assert.throws(() => HotelRatingsSchema.parse({ hotelIds: '' }));
+  assert.throws(() => HotelRatingsSchema.parse({ north: 1, south: 0, east: 1, west: 0 }));
+});
 
 test("Amadeus configuration rejects missing and blank credentials and unknown environments", () => {
   const previous = {

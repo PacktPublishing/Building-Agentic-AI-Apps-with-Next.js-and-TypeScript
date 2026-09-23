@@ -7,7 +7,7 @@ import {
   AirlineSearchParams,
   HotelSearchParams,
   CitySearchParams,
-  DestinationExperiencesParams,
+  HotelRatingsParams,
   ToursActivitiesParams,
 } from "../types/amadeus";
 
@@ -244,14 +244,10 @@ export class AmadeusClient {
     }
   }
 
-  async getDestinationExperiences(params: DestinationExperiencesParams) {
+  async getHotelRatings(params: HotelRatingsParams) {
     try {
-      // Use the correct API endpoint for hotel sentiments
       const response = await this.client.ereputation.hotelSentiments.get({
-        north: params.north,
-        west: params.west,
-        south: params.south,
-        east: params.east,
+        hotelIds: params.hotelIds,
       });
 
       return {

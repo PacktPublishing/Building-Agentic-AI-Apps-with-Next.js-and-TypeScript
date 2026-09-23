@@ -5,6 +5,7 @@ describe('deployment feature configuration', () => {
   it('fails safely on blank or invalid chat configuration', () => {
     for (const env of [{}, { ANTHROPIC_API_KEY: ' ', AMADEUS_BEARER_TOKEN: 'token', AMADEUS_URL: 'https://mcp.example/api/mcp' },
       { ANTHROPIC_API_KEY: 'key', AMADEUS_BEARER_TOKEN: 'token', AMADEUS_URL: 'https://other.example/api/mcp', MODEL_NAME: 'invalid' },
+      { ANTHROPIC_API_KEY: 'key', AMADEUS_BEARER_TOKEN: 'token', AMADEUS_URL: 'https://other.example/api/mcp', MODEL_NAME: 'claude-fake-model' },
       { ANTHROPIC_API_KEY: 'key', AMADEUS_BEARER_TOKEN: 'token', AMADEUS_URL: 'http://mcp.example/api/mcp' }]) {
       expect(() => validateFeature('chat', env)).toThrow(FeatureConfigError);
     }

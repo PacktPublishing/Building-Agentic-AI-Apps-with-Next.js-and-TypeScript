@@ -2,7 +2,7 @@
 const READ_ONLY_TOOLS = new Set([
   'get_current_date', 'search_trips', 'find_similar_trips',
   'search_flights', 'analyze_flight_prices', 'search_airports', 'get_airline_info',
-  'search_hotels', 'search_cities', 'get_destination_experiences', 'search_tours_activities',
+  'search_hotels', 'search_cities', 'get_hotel_ratings', 'search_tours_activities',
 ]);
 
 export function assertReadOnlyTools(tools: Array<{ name: string }>): void {

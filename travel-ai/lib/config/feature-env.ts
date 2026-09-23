@@ -26,7 +26,8 @@ export function validateFeature(feature: Feature, env: FeatureEnvironment = proc
   const production = env.NODE_ENV === 'production';
   if (feature === 'chat') {
     const model = value(env, 'MODEL_NAME') || 'claude-sonnet-4-5-20250929';
-    if (!value(env, 'ANTHROPIC_API_KEY') || !/^claude-[a-z0-9-]+$/.test(model) ||
+    if (!value(env, 'ANTHROPIC_API_KEY') ||
+      !/^claude-(?:(?:sonnet|opus|haiku)-\d+(?:-\d+)?|\d+(?:-\d+)?-(?:sonnet|opus|haiku))(-\d{8})?$/.test(model) ||
       !value(env, 'AMADEUS_BEARER_TOKEN') || !trustedUrl(value(env, 'AMADEUS_URL'), '/api/mcp', production)) fail();
   }
   if (feature === 'retrieval') {
