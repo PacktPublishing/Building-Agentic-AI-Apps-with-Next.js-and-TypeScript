@@ -17,8 +17,9 @@
  */
 
 import { createSwarm } from '@langchain/langgraph-swarm'
-import { MemorySaver } from '@langchain/langgraph'
+import { getOrchestrationCheckpointer } from '../../../lib/orchestration/checkpointer'
 import { HumanMessage } from '@langchain/core/messages'
+import type { RunnableConfig } from '@langchain/core/runnables'
 import { createResearchAgent } from './research-agent'
 import { createBookingAgent } from './booking-agent'
 import { createPlanningAgent } from './planning-agent'
@@ -43,7 +44,7 @@ export async function createTravelSwarm() {
   })
 
   // Compile with memory for conversation persistence
-  const memory = new MemorySaver()
+  const memory = await getOrchestrationCheckpointer()
   const graph = workflow.compile({ checkpointer: memory })
 
   console.log('[TravelSwarm] Swarm initialized successfully')
@@ -88,21 +89,23 @@ const DEFAULT_AGENT = 'ResearchAgent'
  */
 export async function invokeSwarm(
   message: string,
-  threadId: string = 'default'
+  threadId: string,
+  signal?: AbortSignal,
+  callbacks?: RunnableConfig['callbacks']
 ) {
   const { graph } = await getTravelSwarm()
 
   const result = await graph.invoke(
     { messages: [new HumanMessage(message)] },
-    { configurable: { thread_id: threadId } }
+    { configurable: { thread_id: threadId }, signal, recursionLimit: 12, callbacks }
   )
 
   // Get the last message (response from active agent)
-  const lastMessage = result.messages[result.messages.length - 1]
+  const lastMessage = [...result.messages].reverse().find((message: any) => message._getType?.() === 'ai')
   const response =
-    typeof lastMessage.content === 'string'
+    typeof lastMessage?.content === 'string'
       ? lastMessage.content
-      : JSON.stringify(lastMessage.content)
+      : 'No response generated'
 
   // Get state to determine active agent
   // activeAgent is undefined until a handoff occurs, then use defaultActiveAgent
@@ -122,7 +125,8 @@ export async function invokeSwarm(
  */
 export async function* streamSwarm(
   message: string,
-  threadId: string = 'default'
+  threadId: string,
+  signal?: AbortSignal
 ) {
   const { graph } = await getTravelSwarm()
 
@@ -131,6 +135,8 @@ export async function* streamSwarm(
     {
       configurable: { thread_id: threadId },
       streamMode: 'updates',
+      signal,
+      recursionLimit: 12,
     }
   )
 

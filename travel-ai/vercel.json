@@ -1,1 +1,4 @@
-{ "build": { "env": { "NODE_VERSION": "20" } } }
+{
+  "build": { "env": { "NODE_VERSION": "20" } },
+  "crons": [{ "path": "/api/cron/prune-orchestration", "schedule": "0 3 * * *" }]
+}

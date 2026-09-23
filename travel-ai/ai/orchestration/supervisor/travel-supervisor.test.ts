@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AIMessage, HumanMessage, ToolMessage, type BaseMessage } from '@langchain/core/messages';
 import { createTravelSupervisor } from './travel-supervisor';
+import { MemorySaver } from '@langchain/langgraph';
 
 function report(kind: 'flight' | 'hotel', summary: string) {
   return new ToolMessage({ content: JSON.stringify({ type: `${kind}_report`, summary, totalOptions: 1 }), name: `report_${kind}_results`, tool_call_id: 'report-1' });
@@ -26,7 +27,7 @@ describe('Supervisor conversation turns', () => {
       workerCalls++;
       return { messages: [report('flight', 'flight report for second request')] };
     } } };
-    const { graph } = await createTravelSupervisor({ model, agents: { FlightAgent: flight } });
+    const { graph } = await createTravelSupervisor({ model, agents: { FlightAgent: flight }, checkpointer: new MemorySaver() });
     const configuration = { configurable: { thread_id: 'test-two-turns' } };
     await graph.invoke({ messages: [new HumanMessage('first request')] }, configuration);
     const second = await graph.invoke({ messages: [new HumanMessage('second request')] }, configuration);
@@ -56,7 +57,7 @@ describe('Supervisor report isolation', () => {
       FlightAgent: { agent: { invoke: async () => ({ messages: [report('flight', 'old flight report')] }) } },
       HotelAgent: { agent: { invoke: async () => ({ messages: [report('hotel', 'new hotel report')] }) } },
     };
-    const { graph } = await createTravelSupervisor({ model, agents });
+    const { graph } = await createTravelSupervisor({ model, agents, checkpointer: new MemorySaver() });
     const configuration = { configurable: { thread_id: 'test-delegation-turns' } };
     await graph.invoke({ messages: [new HumanMessage('first request')] }, configuration);
     const second = await graph.invoke({ messages: [new HumanMessage('second request')] }, configuration);
@@ -82,7 +83,7 @@ describe('Supervisor report isolation', () => {
       FlightAgent: { agent: { invoke: async () => ({ messages: [report('flight', 'Valid flight')] }) } },
       HotelAgent: { agent: { invoke: async () => { throw new Error('private provider error'); } } },
     };
-    const { graph } = await createTravelSupervisor({ model, agents });
+    const { graph } = await createTravelSupervisor({ model, agents, checkpointer: new MemorySaver() });
     const result = await graph.invoke({ messages: [new HumanMessage('Trip') ] }, { configurable: { thread_id: 'partial' } });
     expect(result.finalResponse).toBe('Partial answer');
     expect(synthesisCalls).toBe(1);

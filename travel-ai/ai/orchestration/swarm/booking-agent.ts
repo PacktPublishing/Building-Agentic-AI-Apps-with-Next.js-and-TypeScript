@@ -12,7 +12,7 @@ import { DynamicStructuredTool } from '@langchain/core/tools'
 import { z } from 'zod'
 import { config } from '../../../config'
 
-const BOOKING_AGENT_PROMPT = `You are the Booking Agent, specialized in handling travel reservations.
+const BOOKING_AGENT_PROMPT = `You are the Booking Agent for a demo. Every booking tool is a simulation and creates no real reservation. Never imply a real reservation exists.
 
 Your role:
 1. Confirm booking details with the traveler
@@ -59,7 +59,7 @@ export async function createBookingAgent() {
   // Booking simulation tools
   const confirmFlightBookingTool = new DynamicStructuredTool({
     name: 'confirm_flight_booking',
-    description: 'Confirm and process a flight booking',
+    description: 'Simulate a flight booking; no real reservation is made',
     schema: z.object({
       flightId: z.string().describe('The flight offer ID'),
       passengers: z
@@ -78,17 +78,18 @@ export async function createBookingAgent() {
       const confirmationNumber = `FL${Date.now().toString(36).toUpperCase()}`
       return JSON.stringify({
         success: true,
+        simulated: true,
         confirmationNumber,
         flightId: input.flightId,
         passengers: input.passengers.length,
-        message: `Flight booking confirmed! Confirmation: ${confirmationNumber}`,
+        message: `Simulated flight booking only. Demo reference: ${confirmationNumber}`,
       })
     },
   })
 
   const confirmHotelBookingTool = new DynamicStructuredTool({
     name: 'confirm_hotel_booking',
-    description: 'Confirm and process a hotel booking',
+    description: 'Simulate a hotel booking; no real reservation is made',
     schema: z.object({
       hotelId: z.string().describe('The hotel ID'),
       checkIn: z.string().describe('Check-in date'),
@@ -101,18 +102,19 @@ export async function createBookingAgent() {
       const confirmationNumber = `HT${Date.now().toString(36).toUpperCase()}`
       return JSON.stringify({
         success: true,
+        simulated: true,
         confirmationNumber,
         hotelId: input.hotelId,
         checkIn: input.checkIn,
         checkOut: input.checkOut,
-        message: `Hotel booking confirmed! Confirmation: ${confirmationNumber}`,
+        message: `Simulated hotel booking only. Demo reference: ${confirmationNumber}`,
       })
     },
   })
 
   const confirmActivityBookingTool = new DynamicStructuredTool({
     name: 'confirm_activity_booking',
-    description: 'Confirm and process an activity or tour booking',
+    description: 'Simulate an activity booking; no real reservation is made',
     schema: z.object({
       activityId: z.string().describe('The activity ID'),
       date: z.string().describe('Activity date'),
@@ -123,11 +125,12 @@ export async function createBookingAgent() {
       const confirmationNumber = `AC${Date.now().toString(36).toUpperCase()}`
       return JSON.stringify({
         success: true,
+        simulated: true,
         confirmationNumber,
         activityId: input.activityId,
         date: input.date,
         participants: input.participants,
-        message: `Activity booking confirmed! Confirmation: ${confirmationNumber}`,
+        message: `Simulated activity booking only. Demo reference: ${confirmationNumber}`,
       })
     },
   })

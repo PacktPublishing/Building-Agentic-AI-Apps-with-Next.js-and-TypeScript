@@ -2,6 +2,8 @@
 
 > Source mapping (current implementation): `ai/orchestration/supervisor/travel-supervisor.ts` owns the graph and resets `agentTasks`, `agentOutputs`, `pendingAgents`, and `finalResponse` on each turn. `ai/orchestration/supervisor/supervisor-contract.ts` validates routing decisions and the `report_*_results` tool messages. `app/api/orchestration/supervisor/route.ts` is the HTTP entry point. The illustrative snippets below predate the current LangChain API; use the linked source files, not the snippets, when copying code.
 
+> Web API security: both orchestration routes use `lib/orchestration/session.ts` to verify a Supabase bearer token, issue owner-scoped UUID conversations, cap request size and daily usage, and lease one active execution per thread. `lib/orchestration/checkpointer.ts` uses PostgreSQL rather than `MemorySaver` in the deployed graph. Apply `drizzle/0004_orchestration_sessions.sql` before serving traffic and configure the daily cleanup cron with `CRON_SECRET`. Streaming emits typed `thread`, `progress`, `final`, `error`, and `done` frames; progress never contains worker messages or router reasoning.
+
 ## Overview
 
 The Supervisor pattern implements a hierarchical multi-agent system where a central supervisor agent coordinates specialized worker agents. This pattern is ideal when you need:

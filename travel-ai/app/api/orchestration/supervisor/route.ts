@@ -1,124 +1,70 @@
-/**
- * Supervisor Pattern API Route
- *
- * Handles chat requests using the hierarchical supervisor pattern
- * where a central supervisor coordinates specialized agents.
- */
+import { NextRequest, NextResponse } from 'next/server';
+import { invokeSupervisor, streamSupervisor } from '@/ai/orchestration/supervisor';
+import { authenticatedUser, beginRun, parseConversationBody, publicSessionError, resolveThread } from '@/lib/orchestration/session';
 
-import { NextRequest, NextResponse } from "next/server";
-import { invokeSupervisor, streamSupervisor } from "@/ai/orchestration/supervisor";
-
-export const runtime = "nodejs";
+export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-/**
- * POST /api/orchestration/supervisor
- *
- * Execute a query through the supervisor multi-agent system
- */
-export async function POST(request: NextRequest) {
-    try {
-        const body = await request.json();
-        const { message, threadId = `supervisor-${Date.now()}`, stream = false } = body;
-
-        if (!message) {
-            return NextResponse.json(
-                { error: "Message is required" },
-                { status: 400 }
-            );
-        }
-
-        if (stream) {
-            // Return SSE stream
-            const encoder = new TextEncoder();
-            const readable = new ReadableStream({
-                async start(controller) {
-                    try {
-                        for await (const update of streamSupervisor(message, threadId)) {
-                            const data = JSON.stringify(update);
-                            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-                        }
-                        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-                        controller.close();
-                    } catch (error) {
-                        console.error("[Supervisor API] Stream error:", error);
-                        const errorData = JSON.stringify({ error: String(error) });
-                        controller.enqueue(encoder.encode(`data: ${errorData}\n\n`));
-                        controller.close();
-                    }
-                },
-            });
-
-            return new Response(readable, {
-                headers: {
-                    "Content-Type": "text/event-stream",
-                    "Cache-Control": "no-cache",
-                    "Connection": "keep-alive",
-                },
-            });
-        }
-
-        // Non-streaming response
-        const result = await invokeSupervisor(message, threadId);
-
-        return NextResponse.json({
-            success: true,
-            ...result,
-            threadId,
-            pattern: "supervisor",
-        });
-    } catch (error) {
-        console.error("[Supervisor API] Error:", error);
-        return NextResponse.json(
-            {
-                error: "Failed to process request",
-                details: error instanceof Error ? error.message : String(error)
-            },
-            { status: 500 }
-        );
-    }
+function frame(event: string, data: object): Uint8Array {
+  return new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 }
 
-/**
- * GET /api/orchestration/supervisor
- *
- * Get information about the supervisor pattern
- */
-export async function GET() {
-    return NextResponse.json({
-        pattern: "supervisor",
-        description: "Hierarchical multi-agent system with a central supervisor",
-        agents: [
-            {
-                name: "Supervisor",
-                role: "Central coordinator that receives all requests and delegates to specialists",
-            },
-            {
-                name: "FlightAgent",
-                role: "Specialist for flight searches and recommendations",
-            },
-            {
-                name: "HotelAgent",
-                role: "Specialist for hotel and accommodation searches",
-            },
-            {
-                name: "ActivityAgent",
-                role: "Specialist for tours, activities, and experiences",
-            },
-        ],
-        characteristics: [
-            "All communication goes through the supervisor",
-            "Better control over agent coordination",
-            "Suitable for complex multi-step tasks",
-            "Higher token usage due to coordination overhead",
-        ],
-        usage: {
-            method: "POST",
-            body: {
-                message: "Your travel query",
-                threadId: "optional-thread-id",
-                stream: "boolean - enable SSE streaming",
-            },
-        },
+export async function POST(request: NextRequest) {
+  let release: (() => Promise<void>) | undefined;
+  try {
+    const userId = await authenticatedUser(request);
+    const input = parseConversationBody(await request.json());
+    const thread = await resolveThread(userId, 'supervisor', input.threadId);
+    release = await beginRun(userId, 'supervisor', thread.publicId);
+    const streamAbort = new AbortController();
+    const signal = AbortSignal.any([request.signal, streamAbort.signal, AbortSignal.timeout(55_000)]);
+
+    if (!input.stream) {
+      try {
+        const result = await invokeSupervisor(input.message, thread.internalId, signal);
+        return NextResponse.json({ success: true, response: result.response, threadId: thread.publicId, pattern: 'supervisor' });
+      } finally {
+        await release();
+      }
+    }
+
+    const freeLease = release;
+    const readable = new ReadableStream<Uint8Array>({
+      start(controller) {
+        void (async () => {
+        let finalResponse: string | undefined;
+        try {
+          controller.enqueue(frame('thread', { threadId: thread.publicId }));
+          for await (const update of streamSupervisor(input.message, thread.internalId, signal)) {
+            if (signal.aborted) throw new Error('Conversation cancelled');
+            if (update.node === 'synthesize' || update.node === 'supervisor') {
+              const response = (update.data as { finalResponse?: unknown })?.finalResponse;
+              if (typeof response === 'string') finalResponse = response;
+            }
+            controller.enqueue(frame('progress', { node: update.node }));
+          }
+          if (!finalResponse) throw new Error('Conversation produced no response');
+          controller.enqueue(frame('final', { response: finalResponse }));
+          controller.enqueue(frame('done', {}));
+        } catch {
+          if (!streamAbort.signal.aborted) controller.enqueue(frame('error', { error: 'Conversation failed' }));
+        } finally {
+          try { await freeLease(); } catch { /* A timed lease will expire if storage is unavailable. */ }
+          if (!streamAbort.signal.aborted) controller.close();
+        }
+        })();
+      },
+      cancel() { streamAbort.abort(); },
     });
+    release = undefined;
+    return new Response(readable, { headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform' } });
+  } catch (error) {
+    if (release) await release();
+    const safe = publicSessionError(error);
+    return NextResponse.json({ error: safe.message }, { status: safe.status });
+  }
+}
+
+export async function GET() {
+  return NextResponse.json({ pattern: 'supervisor', agents: ['FlightAgent', 'HotelAgent', 'ActivityAgent'] });
 }

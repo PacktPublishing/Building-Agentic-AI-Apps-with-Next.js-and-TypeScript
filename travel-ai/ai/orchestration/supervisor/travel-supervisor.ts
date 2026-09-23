@@ -13,8 +13,9 @@
 
 import { ChatAnthropic } from "@langchain/anthropic";
 import { StateGraph, Annotation, END, START } from "@langchain/langgraph";
-import { MemorySaver } from "@langchain/langgraph";
+import { getOrchestrationCheckpointer } from '../../../lib/orchestration/checkpointer';
 import { BaseMessage, HumanMessage, AIMessage, SystemMessage } from "@langchain/core/messages";
+import type { RunnableConfig } from '@langchain/core/runnables';
 import { config } from "../../../config";
 import { createFlightAgent } from "./flight-agent";
 import { createHotelAgent } from "./hotel-agent";
@@ -102,6 +103,7 @@ Format your response in a user-friendly way with clear sections for each type of
 export async function createTravelSupervisor(dependencies: {
     model?: { invoke(messages: BaseMessage[]): Promise<{ content: unknown }> };
     agents?: Record<string, any>;
+    checkpointer?: any;
 } = {}) {
     const model = dependencies.model ?? new ChatAnthropic({
         apiKey: config.anthropic_api_key,
@@ -276,7 +278,7 @@ export async function createTravelSupervisor(dependencies: {
         .addEdge("ActivityAgent", "synthesize")
         .addEdge("synthesize", END);
 
-    const memory = new MemorySaver();
+    const memory = dependencies.checkpointer ?? await getOrchestrationCheckpointer();
     const graph = workflow.compile({ checkpointer: memory });
 
     return {
@@ -301,12 +303,12 @@ export async function getTravelSupervisor() {
 /**
  * Execute a query through the supervisor
  */
-export async function invokeSupervisor(message: string, threadId: string = "default") {
+export async function invokeSupervisor(message: string, threadId: string, signal?: AbortSignal, callbacks?: RunnableConfig['callbacks']) {
     const { graph } = await getTravelSupervisor();
 
     const result = await graph.invoke(
         { messages: [new HumanMessage(message)] },
-        { configurable: { thread_id: threadId } }
+        { configurable: { thread_id: threadId }, signal, recursionLimit: 12, callbacks }
     );
 
     return {
@@ -319,7 +321,7 @@ export async function invokeSupervisor(message: string, threadId: string = "defa
 /**
  * Stream execution through the supervisor
  */
-export async function* streamSupervisor(message: string, threadId: string = "default") {
+export async function* streamSupervisor(message: string, threadId: string, signal?: AbortSignal) {
     const { graph } = await getTravelSupervisor();
 
     const stream = await graph.stream(
@@ -327,6 +329,8 @@ export async function* streamSupervisor(message: string, threadId: string = "def
         {
             configurable: { thread_id: threadId },
             streamMode: "updates",
+            signal,
+            recursionLimit: 12,
         }
     );
 
