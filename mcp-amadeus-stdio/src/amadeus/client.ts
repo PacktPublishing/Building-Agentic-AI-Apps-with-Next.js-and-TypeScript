@@ -7,7 +7,7 @@ import type {
   AirlineSearchParams,
   HotelSearchParams,
   CitySearchParams,
-  DestinationExperiencesParams,
+  HotelRatingsParams,
   ToursActivitiesParams,
 } from "./schemas.js";
 
@@ -18,6 +18,13 @@ const AmadeusConfigSchema = z.object({
   clientSecret: z.string().min(1, "AMADEUS_CLIENT_SECRET is required"),
   hostname: z.enum(["test", "production"]),
 });
+
+export class AmadeusConfigurationError extends Error {
+  constructor() {
+    super("Amadeus credentials are not configured");
+    this.name = "AmadeusConfigurationError";
+  }
+}
 
 export type AmadeusConfig = z.infer<typeof AmadeusConfigSchema>;
 
@@ -89,9 +96,9 @@ function extractAmadeusError(error: unknown, context: string): string {
 export class AmadeusClient {
   private client: AmadeusClientType;
 
-  constructor(config: AmadeusConfig) {
+  constructor(config: AmadeusConfig, sdk?: AmadeusClientType) {
     const validated = AmadeusConfigSchema.parse(config);
-    this.client = new Amadeus({
+    this.client = sdk ?? new Amadeus({
       clientId: validated.clientId,
       clientSecret: validated.clientSecret,
       hostname: validated.hostname,
@@ -224,19 +231,20 @@ export class AmadeusClient {
     }
   }
 
-  async getDestinationExperiences(params: DestinationExperiencesParams) {
+  async getHotelRatings(params: HotelRatingsParams) {
     try {
-      const response =
-        await this.client.ereputation.hotelSentiments.get({
-          north: params.north,
-          west: params.west,
-          south: params.south,
-          east: params.east,
-        });
-      return { success: true, data: response.data, meta: response.meta };
+      const response = await this.client.ereputation.hotelSentiments.get({
+        hotelIds: params.hotelIds.join(","),
+      });
+      return {
+        success: true,
+        data: response.data ?? [],
+        status: response.data?.length ? "available" : "unavailable",
+        meta: response.meta,
+      };
     } catch (error) {
       throw new Error(
-        extractAmadeusError(error, "Destination experiences failed"),
+        extractAmadeusError(error, "Hotel ratings lookup failed"),
       );
     }
   }
@@ -263,9 +271,11 @@ export function getAmadeusConfig(): AmadeusConfig {
   const hostname =
     process.env.AMADEUS_HOSTNAME === "production" ? "production" : "test";
 
-  return AmadeusConfigSchema.parse({
+  const parsed = AmadeusConfigSchema.safeParse({
     clientId: process.env.AMADEUS_CLIENT_ID,
     clientSecret: process.env.AMADEUS_CLIENT_SECRET,
     hostname,
   });
+  if (!parsed.success) throw new AmadeusConfigurationError();
+  return parsed.data;
 }

@@ -101,7 +101,7 @@ export function registerTravelPrompts(server: McpServer) {
               "1. Look up the city to confirm the IATA code and country.",
               "2. Search for available hotels and highlight a few options across price ranges.",
               "3. Find tours and activities near the city center.",
-              "4. Summarise destination experiences and traveler sentiments if available.",
+              "4. If the hotel search returns Amadeus hotel IDs, request ratings for up to three IDs; say when ratings are unavailable.",
               "5. Give me a short overview of why this destination is worth visiting.",
             ].join("\n"),
           },

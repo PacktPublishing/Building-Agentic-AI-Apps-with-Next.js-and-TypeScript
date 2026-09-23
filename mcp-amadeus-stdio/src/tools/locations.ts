@@ -6,6 +6,7 @@ import {
   CitySearchSchema,
   ToursActivitiesSchema,
 } from "../amadeus/schemas.js";
+import { toolFailure } from "./tool-result.js";
 
 /**
  * Register location & reference-data MCP tools on the server.
@@ -30,10 +31,7 @@ export function registerLocationTools(
           content: [{ type: "text" as const, text: JSON.stringify(result) }],
         };
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return {
-          content: [{ type: "text" as const, text: `Error: ${msg}` }],
-        };
+        return toolFailure(err, "Airport search");
       }
     },
   );
@@ -53,10 +51,7 @@ export function registerLocationTools(
           content: [{ type: "text" as const, text: JSON.stringify(result) }],
         };
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return {
-          content: [{ type: "text" as const, text: `Error: ${msg}` }],
-        };
+        return toolFailure(err, "Airline lookup");
       }
     },
   );
@@ -77,10 +72,7 @@ export function registerLocationTools(
           content: [{ type: "text" as const, text: JSON.stringify(result) }],
         };
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return {
-          content: [{ type: "text" as const, text: `Error: ${msg}` }],
-        };
+        return toolFailure(err, "City search");
       }
     },
   );
@@ -102,10 +94,7 @@ export function registerLocationTools(
           content: [{ type: "text" as const, text: JSON.stringify(result) }],
         };
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return {
-          content: [{ type: "text" as const, text: `Error: ${msg}` }],
-        };
+        return toolFailure(err, "Activities search");
       }
     },
   );

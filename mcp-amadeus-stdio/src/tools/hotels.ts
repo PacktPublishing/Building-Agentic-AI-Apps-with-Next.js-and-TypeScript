@@ -1,9 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { AmadeusClient } from "../amadeus/client.js";
 import {
+  HotelSearchFields,
   HotelSearchSchema,
-  DestinationExperiencesSchema,
+  HotelRatingsSchema,
 } from "../amadeus/schemas.js";
+import { toolFailure } from "./tool-result.js";
 
 /**
  * Register hotel-related MCP tools on the server.
@@ -17,13 +19,13 @@ export function registerHotelTools(
     "search_hotels",
     "Search for hotels in a city with dates, guest count, and rate filters",
     {
-      cityCode: HotelSearchSchema.shape.cityCode,
-      checkInDate: HotelSearchSchema.shape.checkInDate,
-      checkOutDate: HotelSearchSchema.shape.checkOutDate,
-      adults: HotelSearchSchema.shape.adults,
-      roomQuantity: HotelSearchSchema.shape.roomQuantity,
-      currency: HotelSearchSchema.shape.currency,
-      bestRateOnly: HotelSearchSchema.shape.bestRateOnly,
+      cityCode: HotelSearchFields.shape.cityCode,
+      checkInDate: HotelSearchFields.shape.checkInDate,
+      checkOutDate: HotelSearchFields.shape.checkOutDate,
+      adults: HotelSearchFields.shape.adults,
+      roomQuantity: HotelSearchFields.shape.roomQuantity,
+      currency: HotelSearchFields.shape.currency,
+      bestRateOnly: HotelSearchFields.shape.bestRateOnly,
     },
     async (params) => {
       try {
@@ -33,37 +35,27 @@ export function registerHotelTools(
           content: [{ type: "text" as const, text: JSON.stringify(result) }],
         };
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return {
-          content: [{ type: "text" as const, text: `Error: ${msg}` }],
-        };
+        return toolFailure(err, "Hotel search");
       }
     },
   );
 
-  // ── get_destination_experiences ──────────────────────────────────────
+  // ── get_hotel_ratings ─────────────────────────────────────────────────
   server.tool(
-    "get_destination_experiences",
-    "Get hotel sentiments and experiences for a geographic area",
+    "get_hotel_ratings",
+    "Get available review sentiment ratings for one to three Amadeus hotel IDs",
     {
-      north: DestinationExperiencesSchema.shape.north,
-      west: DestinationExperiencesSchema.shape.west,
-      south: DestinationExperiencesSchema.shape.south,
-      east: DestinationExperiencesSchema.shape.east,
+      hotelIds: HotelRatingsSchema.shape.hotelIds,
     },
     async (params) => {
       try {
-        const validated = DestinationExperiencesSchema.parse(params);
-        const result =
-          await getClient().getDestinationExperiences(validated);
+        const validated = HotelRatingsSchema.parse(params);
+        const result = await getClient().getHotelRatings(validated);
         return {
           content: [{ type: "text" as const, text: JSON.stringify(result) }],
         };
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return {
-          content: [{ type: "text" as const, text: `Error: ${msg}` }],
-        };
+        return toolFailure(err, "Hotel ratings lookup");
       }
     },
   );

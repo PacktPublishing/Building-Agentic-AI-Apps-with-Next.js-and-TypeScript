@@ -1,9 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { AmadeusClient } from "../amadeus/client.js";
 import {
+  FlightSearchFields,
   FlightSearchSchema,
   FlightPriceAnalysisSchema,
 } from "../amadeus/schemas.js";
+import { toolFailure } from "./tool-result.js";
 
 /**
  * Register flight-related MCP tools on the server.
@@ -23,17 +25,17 @@ export function registerFlightTools(
     "search_flights",
     "Search for flights between two airports with filters (dates, class, stops, price)",
     {
-      origin: FlightSearchSchema.shape.origin,
-      destination: FlightSearchSchema.shape.destination,
-      departureDate: FlightSearchSchema.shape.departureDate,
-      returnDate: FlightSearchSchema.shape.returnDate,
-      adults: FlightSearchSchema.shape.adults,
-      children: FlightSearchSchema.shape.children,
-      infants: FlightSearchSchema.shape.infants,
-      travelClass: FlightSearchSchema.shape.travelClass,
-      nonStop: FlightSearchSchema.shape.nonStop,
-      maxPrice: FlightSearchSchema.shape.maxPrice,
-      currency: FlightSearchSchema.shape.currency,
+      origin: FlightSearchFields.shape.origin,
+      destination: FlightSearchFields.shape.destination,
+      departureDate: FlightSearchFields.shape.departureDate,
+      returnDate: FlightSearchFields.shape.returnDate,
+      adults: FlightSearchFields.shape.adults,
+      children: FlightSearchFields.shape.children,
+      infants: FlightSearchFields.shape.infants,
+      travelClass: FlightSearchFields.shape.travelClass,
+      nonStop: FlightSearchFields.shape.nonStop,
+      maxPrice: FlightSearchFields.shape.maxPrice,
+      currency: FlightSearchFields.shape.currency,
     },
     async (params) => {
       try {
@@ -43,10 +45,7 @@ export function registerFlightTools(
           content: [{ type: "text" as const, text: JSON.stringify(result) }],
         };
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return {
-          content: [{ type: "text" as const, text: `Error: ${msg}` }],
-        };
+        return toolFailure(err, "Flight search");
       }
     },
   );
@@ -69,10 +68,7 @@ export function registerFlightTools(
           content: [{ type: "text" as const, text: JSON.stringify(result) }],
         };
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return {
-          content: [{ type: "text" as const, text: `Error: ${msg}` }],
-        };
+        return toolFailure(err, "Flight price analysis");
       }
     },
   );
