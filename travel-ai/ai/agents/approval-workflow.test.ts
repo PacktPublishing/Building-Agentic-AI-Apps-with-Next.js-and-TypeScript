@@ -22,6 +22,12 @@ describe('approval-gated side effects', () => {
 
     const approved = await startApprovalRun(graph, 'approval-approve', 'Please record this');
     expect(sideEffects).toBe(0);
+    await expect(startApprovalRun(graph, 'approval-approve', 'Start another request'))
+      .rejects.toThrow('Resolve the pending approval');
+    expect(sideEffects).toBe(0);
+    const stillPending = await graph.getState({ configurable: { thread_id: 'approval-approve' } }) as unknown as
+      { tasks: Array<{ interrupts?: Array<{ id: string }> }> };
+    expect(stillPending.tasks[0].interrupts?.[0].id).toBe(approved.pending!.id);
     await expect(resumeApprovalRun(graph, 'approval-approve', 'stale-decision', 'approve'))
       .rejects.toThrow('stale or already used');
     expect(sideEffects).toBe(0);

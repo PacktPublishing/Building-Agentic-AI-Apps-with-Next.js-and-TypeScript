@@ -55,4 +55,12 @@ describe('authenticated approval routes', () => {
     expect(response.status).toBe(409);
     expect(mocks.resolveThread).toHaveBeenCalledWith('owner-a', 'approval', threadId);
   });
+
+  it('returns a conflict for a second start while approval is pending', async () => {
+    mocks.startApprovalRun.mockRejectedValue(new ApprovalError(409, 'Resolve the pending approval before starting another message'));
+    const response = await start(request('/api/chat/approval', { threadId, message: 'Start another request' }));
+    expect(response.status).toBe(409);
+    expect(mocks.resolveThread).toHaveBeenCalledWith('owner-a', 'approval', threadId);
+    expect(mocks.startApprovalRun).toHaveBeenCalledTimes(1);
+  });
 });

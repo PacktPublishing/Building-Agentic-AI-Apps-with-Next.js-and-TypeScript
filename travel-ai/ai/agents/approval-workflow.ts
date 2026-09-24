@@ -37,7 +37,12 @@ export function createApprovalGraph(input: {
 }
 
 export async function startApprovalRun(graph: ReturnType<typeof createApprovalGraph>, threadId: string, message: string) {
-  const result = await graph.invoke({ messages: [{ role: 'user', content: message }] }, { configurable: { thread_id: threadId } });
+  const config = { configurable: { thread_id: threadId } };
+  const state = await graph.getState(config) as unknown as { tasks: Array<{ interrupts?: Array<{ id: string }> }> };
+  if (state.tasks.some((task) => task.interrupts?.length)) {
+    throw new ApprovalError(409, 'Resolve the pending approval before starting another message');
+  }
+  const result = await graph.invoke({ messages: [{ role: 'user', content: message }] }, config);
   const pending = result.__interrupt__?.[0];
   return { result, pending };
 }

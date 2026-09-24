@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getApprovalAgent } from '@/ai/agents/approval-agent';
 import { lastAnswer } from '@/ai/agents/approval-response';
-import { startApprovalRun } from '@/ai/agents/approval-workflow';
+import { ApprovalError, startApprovalRun } from '@/ai/agents/approval-workflow';
 import { authenticatedUser, beginRun, parseConversationBody, publicSessionError, resolveThread } from '@/lib/orchestration/session';
 
 export const runtime = 'nodejs';
@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json({ needsApproval: false, threadId: thread.publicId, response: lastAnswer(result) });
   } catch (error) {
+    if (error instanceof ApprovalError) return NextResponse.json({ error: error.message }, { status: error.status });
     const safe = publicSessionError(error);
     return NextResponse.json({ error: safe.message }, { status: safe.status });
   } finally {
