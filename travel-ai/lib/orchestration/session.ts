@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import postgres from 'postgres';
 import { z } from 'zod';
 
-export type Pattern = 'supervisor' | 'swarm';
+export type Pattern = 'supervisor' | 'swarm' | 'approval';
 const threadSchema = z.string().uuid();
 const bodySchema = z.object({
   message: z.string().trim().min(1).max(4000),
