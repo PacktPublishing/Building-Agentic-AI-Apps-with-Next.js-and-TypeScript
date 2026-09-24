@@ -221,7 +221,7 @@ travel-ai/
 ### AI Layer (Intelligence)
 - **Location**: `ai/`
 - **Purpose**: RAG, agents, prompts, AI tools
-- **Dependencies**: None (completely isolated)
+- **Dependencies**: Agent SDKs and the server-only `lib/orchestration/checkpointer` adapter for durable Supervisor/Swarm state. Keep database credentials and checkpoint access out of browser components.
 
 ## 📝 File Naming Conventions
 

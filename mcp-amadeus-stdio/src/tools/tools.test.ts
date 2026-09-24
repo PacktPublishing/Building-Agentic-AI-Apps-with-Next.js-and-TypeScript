@@ -82,3 +82,63 @@ test("all eight API tools report sanitized execution failures", async () => {
     await server.close();
   }
 });
+
+test("all eight API tools keep successful adapter results successful", async () => {
+  const server = new McpServer({ name: "travel-test", version: "1.0.0" });
+  const calls: string[] = [];
+  const adapter = Object.fromEntries([
+    "searchFlights", "analyzeFlightPrices", "searchHotels", "getHotelRatings",
+    "searchAirports", "getAirlineInfo", "searchCities", "searchToursActivities",
+  ].map((name) => [name, async () => { calls.push(name); return { success: true, data: [] }; }]));
+  const getClient = () => adapter as never;
+  registerFlightTools(server, getClient);
+  registerHotelTools(server, getClient);
+  registerLocationTools(server, getClient);
+  const client = new Client({ name: "test-client", version: "1.0.0" });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  const cases = [
+    ["search_flights", { origin: "CDG", destination: "LHR", departureDate: "2026-10-10" }],
+    ["analyze_flight_prices", { origin: "CDG", destination: "LHR", departureDate: "2026-10-10" }],
+    ["search_hotels", { cityCode: "PAR", checkInDate: "2026-10-10", checkOutDate: "2026-10-12" }],
+    ["get_hotel_ratings", { hotelIds: ["XKPARC12"] }],
+    ["search_airports", { keyword: "Paris" }],
+    ["get_airline_info", { airlineCodes: "AF" }],
+    ["search_cities", { keyword: "Paris" }],
+    ["search_tours_activities", { latitude: 48.85, longitude: 2.35 }],
+  ] as const;
+  try {
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+    for (const [name, args] of cases) {
+      const result = await client.callTool({ name, arguments: args });
+      assert.notEqual(result.isError, true, name);
+      assert.ok(Array.isArray(result.content), name);
+      assert.deepEqual(JSON.parse((result.content[0] as { text: string }).text), { success: true, data: [] }, name);
+    }
+    assert.equal(calls.length, cases.length);
+  } finally {
+    await client.close();
+    await server.close();
+  }
+});
+
+test("an upstream rejection remains a sanitized MCP tool error", async () => {
+  const server = new McpServer({ name: "travel-test", version: "1.0.0" });
+  registerFlightTools(server, () => ({
+    searchFlights: async () => { throw new Error("upstream-secret-123456 rejected request"); },
+  }) as never);
+  const client = new Client({ name: "test-client", version: "1.0.0" });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  try {
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+    const result = await client.callTool({ name: "search_flights", arguments: {
+      origin: "CDG", destination: "LHR", departureDate: "2026-10-10",
+    } });
+    assert.equal(result.isError, true);
+    assert.doesNotMatch(JSON.stringify(result), /upstream-secret-123456/);
+  } finally {
+    await client.close();
+    await server.close();
+  }
+});

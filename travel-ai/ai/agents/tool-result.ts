@@ -38,8 +38,8 @@ export const ActivityOffer = z.object({ id: z.string().min(1), name: z.string().
 
 export function availablePrice(value?: { total?: string; grandTotal?: string; currency?: string }) {
   const text = value?.total ?? value?.grandTotal;
-  const amount = text === undefined ? undefined : Number(text);
-  return Number.isFinite(amount) && amount! >= 0 && value?.currency
+  const amount = text?.trim() ? Number(text) : undefined;
+  return Number.isFinite(amount) && amount! >= 0 && value?.currency?.trim()
     ? { amount: amount!, currency: value.currency }
     : undefined;
 }

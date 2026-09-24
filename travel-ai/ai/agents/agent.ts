@@ -522,7 +522,7 @@ class TravelAssistantAgent {
                         activities: result.data.map((item) => {
                             const activity = ActivityOffer.parse(item);
                             const amount = activity.price?.amount;
-                            const hasPrice = amount !== undefined && Number.isFinite(Number(amount)) && !!activity.price?.currencyCode;
+                            const hasPrice = !!amount?.trim() && Number.isFinite(Number(amount)) && Number(amount) >= 0 && !!activity.price?.currencyCode?.trim();
                             return { ...activity, price: hasPrice ? activity.price : undefined };
                         }),
                         totalAvailable: result.meta?.totalAvailable ?? result.data.length

@@ -1,5 +1,7 @@
 /** Live, paid-provider benchmark. Run only with RUN_LIVE_ORCHESTRATION_BENCHMARK=1. */
 import { randomUUID } from 'node:crypto';
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { BaseCallbackHandler } from '@langchain/core/callbacks/base';
 import type { LLMResult } from '@langchain/core/outputs';
 import { invokeSupervisor } from '../ai/orchestration/supervisor';
@@ -35,12 +37,12 @@ class TokenCollector extends BaseCallbackHandler {
 }
 
 type Row = {
-  fixture: string; repetition: number; phase: 'first-turn' | 'stable-thread'; pattern: BenchmarkPattern;
+  fixture: string; repetition: number; phase: 'first-turn' | 'stable-thread'; processState: 'cold' | 'warm'; pattern: BenchmarkPattern;
   durationMs: number; answerValid: boolean; termsPresent: boolean; routeValid: boolean; success: boolean;
   modelCalls: number; inputTokens: number | null; outputTokens: number | null; failure?: string;
 };
 
-async function run(pattern: BenchmarkPattern, fixture: BenchmarkFixture, repetition: number, phase: Row['phase'], threadId: string): Promise<Row> {
+async function run(pattern: BenchmarkPattern, fixture: BenchmarkFixture, repetition: number, phase: Row['phase'], threadId: string, processState: Row['processState'] = 'warm'): Promise<Row> {
   const collector = new TokenCollector();
   const started = performance.now();
   const message = phase === 'first-turn' ? fixture.first : fixture.followUp;
@@ -49,15 +51,53 @@ async function run(pattern: BenchmarkPattern, fixture: BenchmarkFixture, repetit
       ? await invokeSupervisor(message, threadId, AbortSignal.timeout(55_000), [collector])
       : await invokeSwarm(message, threadId, AbortSignal.timeout(55_000), [collector]);
     const verdict = evaluateRun(pattern, fixture, result);
-    return { fixture: fixture.id, repetition, phase, pattern, durationMs: Math.round(performance.now() - started), ...verdict,
+    return { fixture: fixture.id, repetition, phase, processState, pattern, durationMs: Math.round(performance.now() - started), ...verdict,
       modelCalls: collector.modelCalls, inputTokens: collector.missingUsage || !collector.modelCalls ? null : collector.inputTokens,
       outputTokens: collector.missingUsage || !collector.modelCalls ? null : collector.outputTokens };
   } catch (error) {
-    return { fixture: fixture.id, repetition, phase, pattern, durationMs: Math.round(performance.now() - started),
+    return { fixture: fixture.id, repetition, phase, processState, pattern, durationMs: Math.round(performance.now() - started),
       answerValid: false, termsPresent: false, routeValid: false, success: false,
       modelCalls: collector.modelCalls, inputTokens: null, outputTokens: null,
       failure: error instanceof Error ? error.constructor.name : 'UnknownError' };
   }
+}
+
+async function runProcessCold(pattern: BenchmarkPattern, fixture: BenchmarkFixture, repetition: number): Promise<Row> {
+  const started = performance.now();
+  const output = await new Promise<{ code: number | null; stdout: string }>((resolve, reject) => {
+    const child = spawn(process.execPath, ['--import', 'tsx', fileURLToPath(import.meta.url)], {
+      cwd: process.cwd(),
+      env: { ...process.env, BENCHMARK_CHILD_CASE: JSON.stringify({ pattern, fixture: fixture.id, repetition }) },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let stdout = '';
+    child.stdout.on('data', (chunk: Buffer) => { stdout = (stdout + chunk.toString()).slice(-1_000_000); });
+    // Suppress provider diagnostics from benchmark output; a failed row is reported by type only.
+    child.stderr.resume();
+    child.once('error', reject);
+    child.once('close', (code) => resolve({ code, stdout }));
+  });
+  const marker = output.stdout.split('\n').find((line) => line.startsWith('BENCHMARK_CHILD_ROW='));
+  if (output.code !== 0 || !marker) {
+    return { fixture: fixture.id, repetition, phase: 'first-turn', processState: 'cold', pattern,
+      durationMs: Math.round(performance.now() - started), answerValid: false, termsPresent: false, routeValid: false,
+      success: false, modelCalls: 0, inputTokens: null, outputTokens: null, failure: 'ColdProcessFailed' };
+  }
+  const row = JSON.parse(marker.slice('BENCHMARK_CHILD_ROW='.length)) as Row;
+  return { ...row, durationMs: Math.round(performance.now() - started) };
+}
+
+async function runColdChild() {
+  if (process.env.RUN_LIVE_ORCHESTRATION_BENCHMARK !== '1') throw new Error('Live benchmark is not enabled');
+  const requested = JSON.parse(process.env.BENCHMARK_CHILD_CASE ?? '{}') as { pattern?: string; fixture?: string; repetition?: number };
+  const fixture = fixtures.find((item) => item.id === requested.fixture);
+  if (!fixture || !['Supervisor', 'Swarm'].includes(requested.pattern ?? '') || !Number.isInteger(requested.repetition)) {
+    throw new Error('Invalid cold benchmark case');
+  }
+  const row = await run(requested.pattern as BenchmarkPattern, fixture, requested.repetition!, 'first-turn',
+    `benchmark-${requested.pattern}-${randomUUID()}`, 'cold');
+  console.log(`BENCHMARK_CHILD_ROW=${JSON.stringify(row)}`);
+  if (!row.success) process.exitCode = 1;
 }
 
 async function main() {
@@ -77,16 +117,18 @@ async function main() {
   for (const fixture of fixtures) for (let repetition = 0; repetition < repetitions; repetition++) {
     const order: BenchmarkPattern[] = repetition % 2 === 0 ? ['Supervisor', 'Swarm'] : ['Swarm', 'Supervisor'];
     const threads = { Supervisor: `benchmark-supervisor-${randomUUID()}`, Swarm: `benchmark-swarm-${randomUUID()}` };
+    for (const pattern of order) rows.push(await runProcessCold(pattern, fixture, repetition + 1));
     for (const phase of ['first-turn', 'stable-thread'] as const) {
       for (const pattern of order) rows.push(await run(pattern, fixture, repetition + 1, phase, threads[pattern]));
     }
   }
   console.table(rows);
-  console.log('Interpretation: first-turn means a new conversation, stable-thread reuses it; neither is a process-cold measurement.');
+  console.log('Interpretation: cold first-turn includes a fresh Node process startup; warm first-turn uses this already initialized process; stable-thread reuses its conversation.');
   console.log('Quality is fixture-term and routing checks, not a human evaluation. Latency is wall-clock for these live calls only.');
   console.log('Token totals include observed nested model callbacks; null means at least one model call lacked usage. No cost estimate is made.');
   if (rows.some((row) => !row.success)) process.exitCode = 1;
 }
 
-main().catch((error) => { console.error(error instanceof Error ? error.message : 'Benchmark failed'); process.exitCode = 1; })
+const entry = process.env.BENCHMARK_CHILD_CASE ? runColdChild : main;
+entry().catch((error) => { console.error(error instanceof Error ? error.message : 'Benchmark failed'); process.exitCode = 1; })
   .finally(() => closeMcpClient().catch(() => {}));
