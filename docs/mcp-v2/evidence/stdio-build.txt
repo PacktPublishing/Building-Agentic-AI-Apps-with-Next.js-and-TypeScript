@@ -1,0 +1,7 @@
+COMMAND pnpm --filter mcp-amadeus-stdio build
+NODE 20.20.2
+EXIT 0
+
+> mcp-amadeus-stdio@1.0.0 build /Users/salimlaimeche/Desktop/packt/Building-Agentic-AI-Apps-with-Next.js-and-TypeScript/mcp-amadeus-stdio
+> tsc
+

@@ -170,3 +170,7 @@ See `.env.example` for required environment variables.
 ## License
 
 MIT License - see LICENSE file for details
+
+## MCP v2 client
+
+Amadeus uses MCPAdapter 2.0.1 in modern mode with unprefixed tool names. The optional Supabase STDIO client uses SDK v2 with automatic protocol negotiation for third-party compatibility. Durable LangGraph checkpoints, approval owner binding and replay protection are independent of stateless MCP requests. See [migration verification](../docs/mcp-v2/README.md).

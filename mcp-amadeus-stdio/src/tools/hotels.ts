@@ -1,4 +1,5 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
+import { McpServer } from "@modelcontextprotocol/server";
 import { AmadeusClient } from "../amadeus/client.js";
 import {
   HotelSearchFields,
@@ -15,17 +16,20 @@ export function registerHotelTools(
   getClient: () => AmadeusClient,
 ) {
   // ── search_hotels ────────────────────────────────────────────────────
-  server.tool(
+  server.registerTool(
     "search_hotels",
-    "Search for hotels in a city with dates, guest count, and rate filters",
     {
-      cityCode: HotelSearchFields.shape.cityCode,
-      checkInDate: HotelSearchFields.shape.checkInDate,
-      checkOutDate: HotelSearchFields.shape.checkOutDate,
-      adults: HotelSearchFields.shape.adults,
-      roomQuantity: HotelSearchFields.shape.roomQuantity,
-      currency: HotelSearchFields.shape.currency,
-      bestRateOnly: HotelSearchFields.shape.bestRateOnly,
+      description:
+        "Search for hotels in a city with dates, guest count, and rate filters",
+      inputSchema: z.object({
+        cityCode: HotelSearchFields.shape.cityCode,
+        checkInDate: HotelSearchFields.shape.checkInDate,
+        checkOutDate: HotelSearchFields.shape.checkOutDate,
+        adults: HotelSearchFields.shape.adults,
+        roomQuantity: HotelSearchFields.shape.roomQuantity,
+        currency: HotelSearchFields.shape.currency,
+        bestRateOnly: HotelSearchFields.shape.bestRateOnly,
+      }),
     },
     async (params) => {
       try {
@@ -41,11 +45,14 @@ export function registerHotelTools(
   );
 
   // ── get_hotel_ratings ─────────────────────────────────────────────────
-  server.tool(
+  server.registerTool(
     "get_hotel_ratings",
-    "Get available review sentiment ratings for one to three Amadeus hotel IDs",
     {
-      hotelIds: HotelRatingsSchema.shape.hotelIds,
+      description:
+        "Get available review sentiment ratings for one to three Amadeus hotel IDs",
+      inputSchema: z.object({
+        hotelIds: HotelRatingsSchema.shape.hotelIds,
+      }),
     },
     async (params) => {
       try {

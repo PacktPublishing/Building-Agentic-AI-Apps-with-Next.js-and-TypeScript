@@ -1,4 +1,5 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
+import { McpServer } from "@modelcontextprotocol/server";
 import { AmadeusClient } from "../amadeus/client.js";
 import {
   FlightSearchFields,
@@ -21,21 +22,24 @@ export function registerFlightTools(
   getClient: () => AmadeusClient,
 ) {
   // ── search_flights ───────────────────────────────────────────────────
-  server.tool(
+  server.registerTool(
     "search_flights",
-    "Search for flights between two airports with filters (dates, class, stops, price)",
     {
-      origin: FlightSearchFields.shape.origin,
-      destination: FlightSearchFields.shape.destination,
-      departureDate: FlightSearchFields.shape.departureDate,
-      returnDate: FlightSearchFields.shape.returnDate,
-      adults: FlightSearchFields.shape.adults,
-      children: FlightSearchFields.shape.children,
-      infants: FlightSearchFields.shape.infants,
-      travelClass: FlightSearchFields.shape.travelClass,
-      nonStop: FlightSearchFields.shape.nonStop,
-      maxPrice: FlightSearchFields.shape.maxPrice,
-      currency: FlightSearchFields.shape.currency,
+      description:
+        "Search for flights between two airports with filters (dates, class, stops, price)",
+      inputSchema: z.object({
+        origin: FlightSearchFields.shape.origin,
+        destination: FlightSearchFields.shape.destination,
+        departureDate: FlightSearchFields.shape.departureDate,
+        returnDate: FlightSearchFields.shape.returnDate,
+        adults: FlightSearchFields.shape.adults,
+        children: FlightSearchFields.shape.children,
+        infants: FlightSearchFields.shape.infants,
+        travelClass: FlightSearchFields.shape.travelClass,
+        nonStop: FlightSearchFields.shape.nonStop,
+        maxPrice: FlightSearchFields.shape.maxPrice,
+        currency: FlightSearchFields.shape.currency,
+      }),
     },
     async (params) => {
       try {
@@ -51,14 +55,17 @@ export function registerFlightTools(
   );
 
   // ── analyze_flight_prices ────────────────────────────────────────────
-  server.tool(
+  server.registerTool(
     "analyze_flight_prices",
-    "Get flight price metrics and predictions for a specific route",
     {
-      origin: FlightPriceAnalysisSchema.shape.origin,
-      destination: FlightPriceAnalysisSchema.shape.destination,
-      departureDate: FlightPriceAnalysisSchema.shape.departureDate,
-      currency: FlightPriceAnalysisSchema.shape.currency,
+      description:
+        "Get flight price metrics and predictions for a specific route",
+      inputSchema: z.object({
+        origin: FlightPriceAnalysisSchema.shape.origin,
+        destination: FlightPriceAnalysisSchema.shape.destination,
+        departureDate: FlightPriceAnalysisSchema.shape.departureDate,
+        currency: FlightPriceAnalysisSchema.shape.currency,
+      }),
     },
     async (params) => {
       try {

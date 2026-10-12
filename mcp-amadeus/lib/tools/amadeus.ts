@@ -14,8 +14,8 @@ import {
 // Amadeus API response schema
 export const AmadeusResponseSchema = z.object({
   data: z.array(z.unknown()),
-  meta: z.record(z.unknown()).optional(),
-  dictionaries: z.record(z.unknown()).optional(),
+  meta: z.record(z.string(), z.unknown()).optional(),
+  dictionaries: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type AmadeusResponse = z.infer<typeof AmadeusResponseSchema>;
@@ -76,12 +76,14 @@ export class AmadeusClient {
   constructor(config: AmadeusConfig, sdk?: AmadeusClientType) {
     // Validate config with Zod
     const validatedConfig = AmadeusConfigSchema.parse(config);
-    
-    this.client = sdk ?? new Amadeus({
-      clientId: validatedConfig.clientId,
-      clientSecret: validatedConfig.clientSecret,
-      hostname: validatedConfig.hostname,
-    }) as AmadeusClientType;
+
+    this.client =
+      sdk ??
+      (new Amadeus({
+        clientId: validatedConfig.clientId,
+        clientSecret: validatedConfig.clientSecret,
+        hostname: validatedConfig.hostname,
+      }) as AmadeusClientType);
   }
 
   async searchFlights(params: FlightSearchParams) {
@@ -106,7 +108,8 @@ export class AmadeusClient {
         searchParams.maxPrice = params.maxPrice;
       }
 
-      const response = await this.client.shopping.flightOffersSearch.get(searchParams);
+      const response =
+        await this.client.shopping.flightOffersSearch.get(searchParams);
 
       return {
         success: true,
@@ -150,7 +153,8 @@ export class AmadeusClient {
         searchParams.countryCode = params.countryCode;
       }
 
-      const response = await this.client.referenceData.locations.get(searchParams);
+      const response =
+        await this.client.referenceData.locations.get(searchParams);
 
       return {
         success: true,
@@ -164,7 +168,9 @@ export class AmadeusClient {
 
   async getAirlineInfo(params: AirlineSearchParams) {
     try {
-      const airlineCodes = params.airlineCodes.split(",").map((code) => code.trim());
+      const airlineCodes = params.airlineCodes
+        .split(",")
+        .map((code) => code.trim());
 
       const response = await this.client.referenceData.airlines.get({
         airlineCodes: airlineCodes.join(","),
@@ -183,9 +189,10 @@ export class AmadeusClient {
   async searchHotels(params: HotelSearchParams) {
     try {
       // First, get hotel IDs for the city using the correct API path
-      const hotelListResponse = await this.client.referenceData.locations.hotels.byCity.get({
-        cityCode: params.cityCode,
-      });
+      const hotelListResponse =
+        await this.client.referenceData.locations.hotels.byCity.get({
+          cityCode: params.cityCode,
+        });
 
       if (!hotelListResponse.data || hotelListResponse.data.length === 0) {
         return {
@@ -197,7 +204,10 @@ export class AmadeusClient {
 
       // Take first 10 hotels for the search
       const hotels = hotelListResponse.data as Array<{ hotelId: string }>;
-      const hotelIds = hotels.slice(0, 10).map((hotel) => hotel.hotelId).join(',');
+      const hotelIds = hotels
+        .slice(0, 10)
+        .map((hotel) => hotel.hotelId)
+        .join(",");
 
       // Then search for offers using hotel IDs
       const response = await this.client.shopping.hotelOffersSearch.get({
@@ -232,7 +242,8 @@ export class AmadeusClient {
         searchParams.countryCode = params.countryCode;
       }
 
-      const response = await this.client.referenceData.locations.get(searchParams);
+      const response =
+        await this.client.referenceData.locations.get(searchParams);
 
       return {
         success: true,
@@ -283,13 +294,18 @@ export class AmadeusClient {
 // Helper function to get Amadeus config from environment
 export function getAmadeusConfig(): AmadeusConfig {
   const host = process.env.AMADEUS_HOSTNAME?.trim() || "test";
-  const hostname = host === "test.api.amadeus.com" ? "test"
-    : host === "api.amadeus.com" ? "production" : host;
+  const hostname =
+    host === "test.api.amadeus.com"
+      ? "test"
+      : host === "api.amadeus.com"
+        ? "production"
+        : host;
   const parsed = AmadeusConfigSchema.safeParse({
     clientId: process.env.AMADEUS_CLIENT_ID,
     clientSecret: process.env.AMADEUS_CLIENT_SECRET,
     hostname,
   });
-  if (!parsed.success) throw new Error("Amadeus configuration is missing or invalid");
+  if (!parsed.success)
+    throw new Error("Amadeus configuration is missing or invalid");
   return parsed.data;
 }

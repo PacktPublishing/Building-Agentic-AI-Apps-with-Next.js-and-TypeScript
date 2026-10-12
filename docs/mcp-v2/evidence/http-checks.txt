@@ -1,0 +1,89 @@
+
+> mcp-amadeus@0.1.0 test /Users/salimlaimeche/Desktop/packt/Building-Agentic-AI-Apps-with-Next.js-and-TypeScript/mcp-amadeus
+> node --import tsx --test --test-force-exit tests/*.test.ts
+
+TAP version 13
+# Subtest: Hotel Ratings sends only hotel IDs and rejects geographic bounds
+ok 1 - Hotel Ratings sends only hotel IDs and rejects geographic bounds
+  ---
+  duration_ms: 1.836958
+  ...
+# Subtest: Amadeus configuration rejects missing and blank credentials and unknown environments
+ok 2 - Amadeus configuration rejects missing and blank credentials and unknown environments
+  ---
+  duration_ms: 0.229834
+  ...
+# Subtest: provider errors cannot leak synthetic credentials through logs or messages
+ok 3 - provider errors cannot leak synthetic credentials through logs or messages
+  ---
+  duration_ms: 0.25325
+  ...
+# Subtest: valid Amadeus settings do not log credentials or their prefixes
+ok 4 - valid Amadeus settings do not log credentials or their prefixes
+  ---
+  duration_ms: 0.094291
+  ...
+# Subtest: the real MCP route fails closed when its server token is missing
+ok 5 - the real MCP route fails closed when its server token is missing
+  ---
+  duration_ms: 1.79575
+  ...
+# Subtest: two authenticated SDK clients can discover and list tools concurrently
+ok 6 - two authenticated SDK clients can discover and list tools concurrently
+  ---
+  duration_ms: 45.107041
+  ...
+# Subtest: the real MCP route rejects wrong bearer and disallowed Origin
+ok 7 - the real MCP route rejects wrong bearer and disallowed Origin
+  ---
+  duration_ms: 0.910958
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+
+> mcp-amadeus@0.1.0 build /Users/salimlaimeche/Desktop/packt/Building-Agentic-AI-Apps-with-Next.js-and-TypeScript/mcp-amadeus
+> next build --turbopack
+
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /Users/salimlaimeche/Desktop/packt/Building-Agentic-AI-Apps-with-Next.js-and-TypeScript/pnpm-lock.yaml as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * /Users/salimlaimeche/Desktop/packt/Building-Agentic-AI-Apps-with-Next.js-and-TypeScript/mcp-amadeus/pnpm-lock.yaml
+
+   ▲ Next.js 15.5.2 (Turbopack)
+   - Environments: .env
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 55ms
+ ✓ Compiled successfully in 1962ms
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/6) ...
+   Generating static pages (1/6) 
+   Generating static pages (2/6) 
+   Generating static pages (4/6) 
+ ✓ Generating static pages (6/6)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                         Size  First Load JS
+┌ ○ /                                0 B         113 kB
+├ ○ /_not-found                      0 B         113 kB
+├ ƒ /api/[transport]                 0 B            0 B
+└ ƒ /api/test-mcp                    0 B            0 B
++ First Load JS shared by all     118 kB
+  ├ chunks/0b22416995baf7e0.js   75.4 kB
+  └ chunks/c3d15bb249571d57.js     24 kB
+  └ other shared chunks (total)  18.9 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

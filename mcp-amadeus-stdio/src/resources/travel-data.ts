@@ -1,4 +1,4 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/server";
 
 /**
  * Static reference data exposed as MCP resources.
@@ -11,15 +11,30 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 // ── Reference datasets ──────────────────────────────────────────────────────
 
 const MAJOR_AIRPORTS = [
-  { iata: "JFK", name: "John F. Kennedy International", city: "New York", country: "US" },
-  { iata: "LAX", name: "Los Angeles International", city: "Los Angeles", country: "US" },
+  {
+    iata: "JFK",
+    name: "John F. Kennedy International",
+    city: "New York",
+    country: "US",
+  },
+  {
+    iata: "LAX",
+    name: "Los Angeles International",
+    city: "Los Angeles",
+    country: "US",
+  },
   { iata: "LHR", name: "Heathrow", city: "London", country: "GB" },
   { iata: "CDG", name: "Charles de Gaulle", city: "Paris", country: "FR" },
   { iata: "NRT", name: "Narita International", city: "Tokyo", country: "JP" },
   { iata: "DXB", name: "Dubai International", city: "Dubai", country: "AE" },
   { iata: "SIN", name: "Changi", city: "Singapore", country: "SG" },
   { iata: "FRA", name: "Frankfurt am Main", city: "Frankfurt", country: "DE" },
-  { iata: "HKG", name: "Hong Kong International", city: "Hong Kong", country: "HK" },
+  {
+    iata: "HKG",
+    name: "Hong Kong International",
+    city: "Hong Kong",
+    country: "HK",
+  },
   { iata: "SYD", name: "Kingsford Smith", city: "Sydney", country: "AU" },
   { iata: "ORD", name: "O'Hare International", city: "Chicago", country: "US" },
   { iata: "ATL", name: "Hartsfield-Jackson", city: "Atlanta", country: "US" },
@@ -29,10 +44,26 @@ const MAJOR_AIRPORTS = [
 ];
 
 const TRAVEL_CLASSES = [
-  { code: "ECONOMY", label: "Economy", description: "Standard seating with basic amenities" },
-  { code: "PREMIUM_ECONOMY", label: "Premium Economy", description: "Extra legroom and enhanced service" },
-  { code: "BUSINESS", label: "Business", description: "Lie-flat seats, lounge access, premium dining" },
-  { code: "FIRST", label: "First Class", description: "Top-tier service with private suites on select carriers" },
+  {
+    code: "ECONOMY",
+    label: "Economy",
+    description: "Standard seating with basic amenities",
+  },
+  {
+    code: "PREMIUM_ECONOMY",
+    label: "Premium Economy",
+    description: "Extra legroom and enhanced service",
+  },
+  {
+    code: "BUSINESS",
+    label: "Business",
+    description: "Lie-flat seats, lounge access, premium dining",
+  },
+  {
+    code: "FIRST",
+    label: "First Class",
+    description: "Top-tier service with private suites on select carriers",
+  },
 ];
 
 const SUPPORTED_CURRENCIES = [
@@ -51,7 +82,7 @@ const SUPPORTED_CURRENCIES = [
 // ── Registration ────────────────────────────────────────────────────────────
 
 export function registerTravelResources(server: McpServer) {
-  server.resource(
+  server.registerResource(
     "major-airports",
     "travel://reference/major-airports",
     {
@@ -71,7 +102,7 @@ export function registerTravelResources(server: McpServer) {
     }),
   );
 
-  server.resource(
+  server.registerResource(
     "travel-classes",
     "travel://reference/travel-classes",
     {
@@ -91,7 +122,7 @@ export function registerTravelResources(server: McpServer) {
     }),
   );
 
-  server.resource(
+  server.registerResource(
     "supported-currencies",
     "travel://reference/supported-currencies",
     {

@@ -1,0 +1,344 @@
+
+> my-v0-project@0.1.0 check /Users/salimlaimeche/Desktop/packt/Building-Agentic-AI-Apps-with-Next.js-and-TypeScript/travel-ai
+> pnpm lint && pnpm typecheck && pnpm test:run && pnpm build
+
+
+> my-v0-project@0.1.0 lint /Users/salimlaimeche/Desktop/packt/Building-Agentic-AI-Apps-with-Next.js-and-TypeScript/travel-ai
+> eslint . --quiet
+
+
+> my-v0-project@0.1.0 typecheck /Users/salimlaimeche/Desktop/packt/Building-Agentic-AI-Apps-with-Next.js-and-TypeScript/travel-ai
+> tsc --noEmit
+
+
+> my-v0-project@0.1.0 test:run /Users/salimlaimeche/Desktop/packt/Building-Agentic-AI-Apps-with-Next.js-and-TypeScript/travel-ai
+> vitest run --exclude ai/agents/agent.test.ts --exclude ai/agents/supabase-agent.test.ts --exclude app/api/chat/chat.test.ts
+
+
+ RUN  v3.2.4 /Users/salimlaimeche/Desktop/packt/Building-Agentic-AI-Apps-with-Next.js-and-TypeScript/travel-ai
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+stdout | lib/config/feature-env.test.ts
+🧪 Test environment initialized
+
+stdout | lib/config/feature-env.test.ts
+✅ Test environment cleaned up
+
+ ✓ lib/config/feature-env.test.ts (3 tests) 7ms
+stdout | ai/context/context-manager.test.ts
+🧪 Test environment initialized
+
+stdout | ai/context/context-manager.test.ts
+✅ Test environment cleaned up
+
+ ✓ ai/context/context-manager.test.ts (2 tests) 5ms
+stdout | app/api/orchestration/supervisor/route.test.ts
+🧪 Test environment initialized
+
+stdout | app/api/orchestration/supervisor/route.test.ts
+✅ Test environment cleaned up
+
+ ✓ app/api/orchestration/supervisor/route.test.ts (5 tests) 32ms
+stdout | ai/agents/agent-initialization.test.ts
+🧪 Test environment initialized
+
+stdout | ai/agents/agent-initialization.test.ts
+✅ Test environment cleaned up
+
+ ✓ ai/agents/agent-initialization.test.ts (4 tests) 4ms
+stdout | ai/agents/approval-workflow.test.ts
+🧪 Test environment initialized
+
+stdout | ai/agents/approval-workflow.integration.test.ts
+🧪 Test environment initialized
+
+stdout | ai/agents/approval-workflow.test.ts
+✅ Test environment cleaned up
+
+ ✓ ai/agents/approval-workflow.test.ts (2 tests) 110ms
+stdout | app/api/chat/approval/approval-route.test.ts
+🧪 Test environment initialized
+
+stdout | app/api/chat/approval/approval-route.test.ts
+✅ Test environment cleaned up
+
+ ✓ app/api/chat/approval/approval-route.test.ts (4 tests) 11ms
+stdout | ai/orchestration/supervisor/travel-supervisor.test.ts
+🧪 Test environment initialized
+
+stdout | ai/agents/approval-workflow.integration.test.ts
+✅ Test environment cleaned up
+
+ ✓ ai/agents/approval-workflow.integration.test.ts (1 test) 173ms
+stdout | ai/agents/agent-tool-ui.test.ts
+🧪 Test environment initialized
+
+stdout | ai/orchestration/supervisor/travel-supervisor.test.ts
+✅ Test environment cleaned up
+
+ ✓ ai/orchestration/supervisor/travel-supervisor.test.ts (3 tests) 142ms
+stdout | ai/agents/agent-tool-ui.test.ts
+✅ Test environment cleaned up
+
+ ✓ ai/agents/agent-tool-ui.test.ts (3 tests) 9ms
+stdout | app/api/orchestration/swarm/route.test.ts
+🧪 Test environment initialized
+
+stdout | ai/orchestration/supervisor/supervisor-contract.test.ts
+🧪 Test environment initialized
+
+stdout | app/api/orchestration/swarm/route.test.ts
+✅ Test environment cleaned up
+
+ ✓ app/api/orchestration/swarm/route.test.ts (2 tests) 16ms
+stdout | ai/orchestration/supervisor/supervisor-contract.test.ts
+✅ Test environment cleaned up
+
+ ✓ ai/orchestration/supervisor/supervisor-contract.test.ts (3 tests) 8ms
+stdout | lib/orchestration/approval-session.integration.test.ts
+🧪 Test environment initialized
+
+stdout | ai/agents/tool-result.test.ts
+🧪 Test environment initialized
+
+stdout | lib/orchestration/approval-session.integration.test.ts
+✅ Test environment cleaned up
+
+stdout | ai/agents/tool-result.test.ts
+✅ Test environment cleaned up
+
+ ✓ lib/orchestration/approval-session.integration.test.ts (1 test) 58ms
+ ✓ ai/agents/tool-result.test.ts (7 tests) 9ms
+stdout | scripts/orchestration-benchmark-contract.test.ts
+🧪 Test environment initialized
+
+stdout | scripts/orchestration-benchmark-contract.test.ts
+✅ Test environment cleaned up
+
+ ✓ scripts/orchestration-benchmark-contract.test.ts (2 tests) 3ms
+stdout | lib/orchestration/checkpointer.integration.test.ts
+🧪 Test environment initialized
+
+stdout | drizzle.config.test.ts
+🧪 Test environment initialized
+
+stdout | lib/orchestration/sse.test.ts
+🧪 Test environment initialized
+
+stdout | lib/config/postgres-connection.test.ts
+🧪 Test environment initialized
+
+stdout | lib/orchestration/sse.test.ts
+✅ Test environment cleaned up
+
+ ✓ lib/orchestration/sse.test.ts (2 tests) 2ms
+stdout | lib/config/postgres-connection.test.ts
+✅ Test environment cleaned up
+
+ ✓ lib/config/postgres-connection.test.ts (2 tests) 4ms
+stdout | drizzle.config.test.ts
+✅ Test environment cleaned up
+
+ ✓ drizzle.config.test.ts (2 tests) 21ms
+stdout | lib/orchestration/checkpointer.integration.test.ts
+✅ Test environment cleaned up
+
+ ✓ lib/orchestration/checkpointer.integration.test.ts (1 test) 106ms
+stdout | ai/agents/tool-safety.test.ts
+🧪 Test environment initialized
+
+stdout | ai/agents/tool-safety.test.ts
+✅ Test environment cleaned up
+
+ ✓ ai/agents/tool-safety.test.ts (2 tests) 4ms
+stdout | lib/orchestration/session.test.ts
+🧪 Test environment initialized
+
+stdout | lib/orchestration/session.test.ts
+✅ Test environment cleaned up
+
+ ✓ lib/orchestration/session.test.ts (6 tests) 3ms
+
+ Test Files  20 passed (20)
+      Tests  57 passed (57)
+   Start at  19:08:11
+   Duration  2.73s (transform 583ms, setup 1.68s, collect 4.61s, tests 727ms, environment 9.80s, prepare 1.53s)
+
+
+> my-v0-project@0.1.0 build /Users/salimlaimeche/Desktop/packt/Building-Agentic-AI-Apps-with-Next.js-and-TypeScript/travel-ai
+> next build
+
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /Users/salimlaimeche/Desktop/packt/Building-Agentic-AI-Apps-with-Next.js-and-TypeScript/pnpm-lock.yaml as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /Users/salimlaimeche/Desktop/packt/Building-Agentic-AI-Apps-with-Next.js-and-TypeScript/travel-ai/pnpm-lock.yaml
+
+   ▲ Next.js 15.5.14
+   - Environments: .env
+
+   Creating an optimized production build ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+Browserslist: browsers data (caniuse-lite) is 13 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+ ✓ Compiled successfully in 8.4s
+   Linting and checking validity of types ...
+
+./app/api/chat/chat.test.ts
+52:42  Warning: 'e' is defined but never used.  @typescript-eslint/no-unused-vars
+99:38  Warning: 'e' is defined but never used.  @typescript-eslint/no-unused-vars
+171:38  Warning: 'e' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/api/chat/example-client.tsx
+103:25  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./app/api/chat/invoke/route.ts
+14:36  Warning: 'userId' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./app/api/chat/types.ts
+16:26  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+102:81  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+103:84  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+104:80  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./app/api/trips/create/route.ts
+116:34  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./app/api/trips/save/route.ts
+86:70  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./app/components/ToolCallBadge.tsx
+5:27  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+6:14  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+10:43  Warning: 'args' is defined but never used.  @typescript-eslint/no-unused-vars
+10:49  Warning: 'result' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/orchestration/page.tsx
+264:47  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./app/dashboard/trips/[id]/page.tsx
+38:12  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+39:11  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+40:15  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+47:9  Warning: 'router' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/trips/new/page.tsx
+19:26  Warning: 'userLoading' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./app/hooks/useOrchestrationChat.ts
+13:9  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+135:6  Warning: React Hook useCallback has an unnecessary dependency: 'pattern'. Either exclude it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/hooks/useTripPlannerStream.ts
+38:20  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+39:19  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+40:22  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./components/auth/auth-provider.tsx
+11:65  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+12:79  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./components/auth/register-form.tsx
+4:10  Warning: 'useRouter' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/dashboard/api-demo.tsx
+17:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/ui/input.tsx
+5:18  Warning: An interface declaring no members is equivalent to its supertype.  @typescript-eslint/no-empty-object-type
+
+./lib/domain/retrieval/service.ts
+7:15  Warning: 'VectorSearchResult' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./lib/domain/trip/repository.ts
+18:26  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+19:25  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+20:28  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+40:12  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+41:11  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+42:15  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./lib/evaluation/evaluator.ts
+21:3  Warning: 'populateRelevantTripIds' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./lib/evaluation/relevance-matcher.ts
+35:69  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./lib/hooks/use-user.ts
+9:40  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./lib/infrastructure/db/trip-repository.ts
+117:31  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./lib/infrastructure/embeddings/openai-service.ts
+39:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+57:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./lib/infrastructure/qdrant/vector-repository.ts
+111:29  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+136:27  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./lib/infrastructure/reranking/index.ts
+23:17  Warning: A `require()` style import is forbidden.  @typescript-eslint/no-require-imports
+28:15  Warning: A `require()` style import is forbidden.  @typescript-eslint/no-require-imports
+
+./lib/orchestration/sse.ts
+23:48  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+24:50  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+25:47  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+26:47  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+   Collecting page data ...
+   Generating static pages (0/31) ...
+   Generating static pages (7/31) 
+   Generating static pages (15/31) 
+   Generating static pages (23/31) 
+ ✓ Generating static pages (31/31)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                    5.15 kB         159 kB
+├ ○ /_not-found                            989 B         103 kB
+├ ƒ /api/chat/approval                     167 B         102 kB
+├ ƒ /api/chat/approval/decision            167 B         102 kB
+├ ƒ /api/chat/invoke                       167 B         102 kB
+├ ƒ /api/chat/stats                        167 B         102 kB
+├ ƒ /api/chat/stream                       167 B         102 kB
+├ ƒ /api/chat/stream-structured            167 B         102 kB
+├ ƒ /api/cities/resolve                    167 B         102 kB
+├ ƒ /api/cron/prune-orchestration          167 B         102 kB
+├ ƒ /api/orchestration/supervisor          167 B         102 kB
+├ ƒ /api/orchestration/swarm               167 B         102 kB
+├ ƒ /api/qdrant/init                       167 B         102 kB
+├ ƒ /api/trips                             167 B         102 kB
+├ ƒ /api/trips/[id]                        167 B         102 kB
+├ ƒ /api/trips/confirm                     167 B         102 kB
+├ ƒ /api/trips/create                      167 B         102 kB
+├ ƒ /api/trips/save                        167 B         102 kB
+├ ƒ /api/trips/search                      167 B         102 kB
+├ ○ /auth/login                          3.44 kB         157 kB
+├ ○ /chat                                3.23 kB         160 kB
+├ ○ /dashboard                           4.53 kB         158 kB
+├ ○ /dashboard/ai-chat                   3.78 kB         161 kB
+├ ○ /dashboard/orchestration             3.35 kB         116 kB
+├ ○ /dashboard/orchestration/supervisor    443 B         192 kB
+├ ○ /dashboard/orchestration/swarm         438 B         192 kB
+├ ○ /dashboard/profile                     167 B         102 kB
+├ ○ /dashboard/settings                    167 B         102 kB
+├ ○ /dashboard/trips                     4.13 kB         158 kB
+├ ƒ /dashboard/trips/[id]                4.21 kB         126 kB
+└ ○ /dashboard/trips/new                 11.3 kB         174 kB
++ First Load JS shared by all             102 kB
+  ├ chunks/04fabe95-a00549dc73fc24e1.js  54.2 kB
+  ├ chunks/224-67c90d5f13af2091.js       45.3 kB
+  └ other shared chunks (total)          1.93 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
