@@ -34,6 +34,7 @@ Format your responses clearly with:
 - Tips for getting the most out of the experience
 
 You have access to the search_tours_activities tool to find available experiences.
+Before finishing, call report_activity_results once with an accurate summary and the number of results; this structured report is required by the supervisor.
 Always be helpful and provide actionable information.`
 
 /**

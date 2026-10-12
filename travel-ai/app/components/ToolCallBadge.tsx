@@ -55,7 +55,7 @@ export function ToolCallBadge({ toolName, args, result, summary }: ToolCallBadge
                     textColor: 'text-orange-700'
                 };
             case 'search_airports':
-            case 'get_destination_experiences':
+            case 'get_hotel_ratings':
                 return {
                     icon: (
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

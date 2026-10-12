@@ -7,7 +7,7 @@ import {
   AirlineSearchParams,
   HotelSearchParams,
   CitySearchParams,
-  DestinationExperiencesParams,
+  HotelRatingsParams,
   ToursActivitiesParams,
 } from "../types/amadeus";
 
@@ -22,8 +22,8 @@ export type AmadeusResponse = z.infer<typeof AmadeusResponseSchema>;
 
 // Amadeus client configuration schema
 export const AmadeusConfigSchema = z.object({
-  clientId: z.string(),
-  clientSecret: z.string(),
+  clientId: z.string().trim().min(1),
+  clientSecret: z.string().trim().min(1),
   hostname: z.enum(["test", "production"]),
 });
 
@@ -73,11 +73,11 @@ type AmadeusClientType = Amadeus & {
 export class AmadeusClient {
   private client: AmadeusClientType;
 
-  constructor(config: AmadeusConfig) {
+  constructor(config: AmadeusConfig, sdk?: AmadeusClientType) {
     // Validate config with Zod
     const validatedConfig = AmadeusConfigSchema.parse(config);
     
-    this.client = new Amadeus({
+    this.client = sdk ?? new Amadeus({
       clientId: validatedConfig.clientId,
       clientSecret: validatedConfig.clientSecret,
       hostname: validatedConfig.hostname,
@@ -114,20 +114,8 @@ export class AmadeusClient {
         meta: response.meta,
         dictionaries: response.dictionaries,
       };
-    } catch (error) {
-      console.error("Flight search error:", error);
-      
-      // Handle Amadeus API specific errors
-      if (error && typeof error === 'object' && 'response' in error) {
-        const amadeusError = error as { response?: { result?: { errors?: Array<{ title: string; detail: string }> } } };
-        const errorDetails = amadeusError.response?.result?.errors?.[0];
-        if (errorDetails) {
-          throw new Error(`Flight search failed: ${errorDetails.title} - ${errorDetails.detail}`);
-        }
-      }
-      
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new Error(`Flight search failed: ${errorMessage}`);
+    } catch {
+      throw new Error("Flight search unavailable");
     }
   }
 
@@ -145,9 +133,8 @@ export class AmadeusClient {
         data: response.data,
         meta: response.meta,
       };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      throw new Error(`Flight price analysis failed: ${errorMessage}`);
+    } catch {
+      throw new Error("Flight price analysis unavailable");
     }
   }
 
@@ -170,20 +157,8 @@ export class AmadeusClient {
         data: response.data,
         meta: response.meta,
       };
-    } catch (error) {
-      console.error("Airport search error:", error);
-      
-      // Handle Amadeus API specific errors
-      if (error && typeof error === 'object' && 'response' in error) {
-        const amadeusError = error as { response?: { result?: { errors?: Array<{ title: string; detail: string }> } } };
-        const errorDetails = amadeusError.response?.result?.errors?.[0];
-        if (errorDetails) {
-          throw new Error(`Airport search failed: ${errorDetails.title} - ${errorDetails.detail}`);
-        }
-      }
-      
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new Error(`Airport search failed: ${errorMessage}`);
+    } catch {
+      throw new Error("Airport search unavailable");
     }
   }
 
@@ -200,9 +175,8 @@ export class AmadeusClient {
         data: response.data,
         meta: response.meta,
       };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      throw new Error(`Airline info search failed: ${errorMessage}`);
+    } catch {
+      throw new Error("Airline lookup unavailable");
     }
   }
 
@@ -241,20 +215,8 @@ export class AmadeusClient {
         data: response.data,
         meta: response.meta,
       };
-    } catch (error) {
-      console.error("Hotel search error:", error);
-      
-      // Handle Amadeus API specific errors
-      if (error && typeof error === 'object' && 'response' in error) {
-        const amadeusError = error as { response?: { result?: { errors?: Array<{ title: string; detail: string }> } } };
-        const errorDetails = amadeusError.response?.result?.errors?.[0];
-        if (errorDetails) {
-          throw new Error(`Hotel search failed: ${errorDetails.title} - ${errorDetails.detail}`);
-        }
-      }
-      
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new Error(`Hotel search failed: ${errorMessage}`);
+    } catch {
+      throw new Error("Hotel search unavailable");
     }
   }
 
@@ -277,52 +239,25 @@ export class AmadeusClient {
         data: response.data,
         meta: response.meta,
       };
-    } catch (error) {
-      console.error("City search error:", error);
-      
-      // Handle Amadeus API specific errors
-      if (error && typeof error === 'object' && 'response' in error) {
-        const amadeusError = error as { response?: { result?: { errors?: Array<{ title: string; detail: string }> } } };
-        const errorDetails = amadeusError.response?.result?.errors?.[0];
-        if (errorDetails) {
-          throw new Error(`City search failed: ${errorDetails.title} - ${errorDetails.detail}`);
-        }
-      }
-      
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new Error(`City search failed: ${errorMessage}`);
+    } catch {
+      throw new Error("City search unavailable");
     }
   }
 
-  async getDestinationExperiences(params: DestinationExperiencesParams) {
+  async getHotelRatings(params: HotelRatingsParams) {
     try {
-      // Use the correct API endpoint for hotel sentiments
       const response = await this.client.ereputation.hotelSentiments.get({
-        north: params.north,
-        west: params.west,
-        south: params.south,
-        east: params.east,
+        hotelIds: params.hotelIds.join(","),
       });
 
       return {
         success: true,
-        data: response.data,
+        data: response.data ?? [],
+        status: response.data?.length ? "available" : "unavailable",
         meta: response.meta,
       };
-    } catch (error) {
-      console.error("Destination experiences error:", error);
-      
-      // Handle Amadeus API specific errors
-      if (error && typeof error === 'object' && 'response' in error) {
-        const amadeusError = error as { response?: { result?: { errors?: Array<{ title: string; detail: string }> } } };
-        const errorDetails = amadeusError.response?.result?.errors?.[0];
-        if (errorDetails) {
-          throw new Error(`Destination experiences failed: ${errorDetails.title} - ${errorDetails.detail}`);
-        }
-      }
-      
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new Error(`Destination experiences failed: ${errorMessage}`);
+    } catch {
+      throw new Error("Hotel ratings unavailable");
     }
   }
 
@@ -339,50 +274,22 @@ export class AmadeusClient {
         data: response.data,
         meta: response.meta,
       };
-    } catch (error) {
-      console.error("Tours and activities search error:", error);
-      
-      // Handle Amadeus API specific errors
-      if (error && typeof error === 'object' && 'response' in error) {
-        const amadeusError = error as { response?: { result?: { errors?: Array<{ title: string; detail: string }> } } };
-        const errorDetails = amadeusError.response?.result?.errors?.[0];
-        if (errorDetails) {
-          throw new Error(`Tours and activities search failed: ${errorDetails.title} - ${errorDetails.detail}`);
-        }
-      }
-      
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new Error(`Tours and activities search failed: ${errorMessage}`);
+    } catch {
+      throw new Error("Tours and activities search unavailable");
     }
   }
 }
 
 // Helper function to get Amadeus config from environment
 export function getAmadeusConfig(): AmadeusConfig {
-  const clientId = process.env.AMADEUS_CLIENT_ID || "test_client_id";
-  const clientSecret = process.env.AMADEUS_CLIENT_SECRET || "test_client_secret";
-  const hostname = process.env.AMADEUS_HOSTNAME === "test.api.amadeus.com" ? "test" : 
-                   process.env.AMADEUS_HOSTNAME === "production" ? "production" : "test";
-
-  const config = {
-    clientId,
-    clientSecret,
-    hostname: hostname as "test" | "production",
-  };
-
-  // Validate config with Zod
-  const validatedConfig = AmadeusConfigSchema.parse(config);
-
-  console.log("Amadeus Config:", { 
-    clientId: validatedConfig.clientId ? `${validatedConfig.clientId.substring(0, 4)}...` : "undefined",
-    clientSecret: validatedConfig.clientSecret ? `${validatedConfig.clientSecret.substring(0, 4)}...` : "undefined",
-    hostname: validatedConfig.hostname 
+  const host = process.env.AMADEUS_HOSTNAME?.trim() || "test";
+  const hostname = host === "test.api.amadeus.com" ? "test"
+    : host === "api.amadeus.com" ? "production" : host;
+  const parsed = AmadeusConfigSchema.safeParse({
+    clientId: process.env.AMADEUS_CLIENT_ID,
+    clientSecret: process.env.AMADEUS_CLIENT_SECRET,
+    hostname,
   });
-
-  // For demo purposes, allow test values
-  if (validatedConfig.clientId === "test_client_id" || validatedConfig.clientSecret === "test_client_secret") {
-    console.warn("⚠️  Using test credentials - API calls will fail. Please configure real Amadeus credentials.");
-  }
-
-  return validatedConfig;
+  if (!parsed.success) throw new Error("Amadeus configuration is missing or invalid");
+  return parsed.data;
 }

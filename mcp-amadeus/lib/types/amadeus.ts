@@ -55,13 +55,11 @@ export const CitySearchSchema = z.object({
   countryCode: z.string().optional().describe("Country code to filter results"),
 });
 
-// Destination experiences schema
-export const DestinationExperiencesSchema = z.object({
-  north: z.number().describe("North latitude boundary"),
-  west: z.number().describe("West longitude boundary"),
-  south: z.number().describe("South latitude boundary"),
-  east: z.number().describe("East longitude boundary"),
-});
+// Hotel Ratings uses hotel IDs, not geographic bounds.
+export const HotelRatingsSchema = z.object({
+  hotelIds: z.array(z.string().regex(/^[A-Z0-9]{8}$/)).min(1).max(3)
+    .describe("One to three Amadeus hotel IDs returned by hotel search"),
+}).strict();
 
 // Tours and activities schema
 export const ToursActivitiesSchema = z.object({
@@ -116,11 +114,8 @@ export interface CitySearchParams {
   countryCode?: string;
 }
 
-export interface DestinationExperiencesParams {
-  north: number;
-  west: number;
-  south: number;
-  east: number;
+export interface HotelRatingsParams {
+  hotelIds: string[];
 }
 
 export interface ToursActivitiesParams {

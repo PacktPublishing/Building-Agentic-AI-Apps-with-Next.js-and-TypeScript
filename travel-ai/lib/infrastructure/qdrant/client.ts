@@ -5,6 +5,7 @@
  */
 
 import { QdrantClient } from '@qdrant/js-client-rest';
+import { validateFeature } from '@/lib/config/feature-env';
 
 let qdrantClient: QdrantClient | null = null;
 
@@ -12,8 +13,9 @@ let qdrantClient: QdrantClient | null = null;
  * Get Qdrant client instance (singleton)
  */
 export function getQdrantClient(): QdrantClient {
+  validateFeature('retrieval');
   if (!qdrantClient) {
-    const url = process.env.QDRANT_URL || 'http://localhost:6333';
+    const url = process.env.QDRANT_URL!.trim();
     const apiKey = process.env.QDRANT_API_KEY;
 
     qdrantClient = new QdrantClient({
@@ -21,7 +23,6 @@ export function getQdrantClient(): QdrantClient {
       apiKey,
     });
 
-    console.log(`📊 Qdrant client initialized: ${url}`);
   }
 
   return qdrantClient;

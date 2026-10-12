@@ -8,10 +8,15 @@ import {
   AirlineSearchSchema,
   HotelSearchSchema,
   CitySearchSchema,
-  DestinationExperiencesSchema,
+  HotelRatingsSchema,
   ToursActivitiesSchema,
 } from "@/lib/types/amadeus";
 import { NextRequest } from "next/server";
+import { createHash, timingSafeEqual } from "node:crypto";
+import { ZodError } from "zod";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 // Initialize Amadeus client lazily to avoid errors during build
 let amadeus: AmadeusClient | null = null;
@@ -27,20 +32,44 @@ function getAmadeusClient() {
 // Bearer token authentication middleware
 function authenticateRequest(request: NextRequest): boolean {
   const authHeader = request.headers.get("authorization");
-  
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  const token = /^Bearer ([^\s]+)$/i.exec(authHeader ?? "")?.[1];
+  const expectedToken = process.env.MCP_BEARER_TOKEN?.trim();
+  if (!token || !expectedToken) return false;
+  const suppliedHash = createHash("sha256").update(token).digest();
+  const expectedHash = createHash("sha256").update(expectedToken).digest();
+  return timingSafeEqual(suppliedHash, expectedHash);
+}
+
+function allowsOrigin(request: NextRequest): boolean {
+  const origin = request.headers.get("origin");
+  if (origin === null) return true; // Native MCP clients authenticate without Origin.
+  try {
+    const parsed = new URL(origin);
+    if (!["http:", "https:"].includes(parsed.protocol) || parsed.origin !== origin) return false;
+    const allowed = (process.env.MCP_ALLOWED_ORIGINS ?? "").split(",").map((value) => value.trim());
+    return allowed.includes(origin);
+  } catch {
     return false;
   }
-  
-  const token = authHeader.substring(7); // Remove "Bearer " prefix
-  const expectedToken = process.env.MCP_BEARER_TOKEN;
-  
-  if (!expectedToken) {
-    console.warn("MCP_BEARER_TOKEN not configured - authentication disabled");
-    return true; // Allow access if no token is configured
+}
+
+function rejection(request: NextRequest): Response | null {
+  if (new URL(request.url).pathname !== "/api/mcp") return new Response(null, { status: 404 });
+  if (!allowsOrigin(request)) return new Response("Forbidden", { status: 403 });
+  if (!authenticateRequest(request)) {
+    return new Response("Unauthorized", {
+      status: 401,
+      headers: { "WWW-Authenticate": 'Bearer realm="mcp"' },
+    });
   }
-  
-  return token === expectedToken;
+  return null;
+}
+
+function safeToolFailure(error: unknown) {
+  const message = error instanceof ZodError ? "Invalid tool input"
+    : error instanceof Error && error.message === "Amadeus configuration is missing or invalid"
+      ? error.message : "Travel provider request unavailable";
+  return { isError: true, content: [{ type: "text" as const, text: `Error: ${message}` }] };
 }
 
 const handler = createMcpHandler(
@@ -73,11 +102,7 @@ const handler = createMcpHandler(
             ],
           };
         } catch (err: unknown) {
-          return {
-            content: [
-              { type: "text", text: "Error: " + String(err) },
-            ],
-          };
+          return safeToolFailure(err);
         }
       }
     );
@@ -103,12 +128,7 @@ const handler = createMcpHandler(
             ],
           };
         } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return {
-            content: [
-              { type: "text", text: "Error: " + msg },
-            ],
-          };
+          return safeToolFailure(err);
         }
       }
     );
@@ -132,12 +152,7 @@ const handler = createMcpHandler(
             ],
           };
         } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return {
-            content: [
-              { type: "text", text: "Error: " + msg },
-            ],
-          };
+          return safeToolFailure(err);
         }
       }
     );
@@ -160,12 +175,7 @@ const handler = createMcpHandler(
             ],
           };
         } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return {
-            content: [
-              { type: "text", text: "Error: " + msg },
-            ],
-          };
+          return safeToolFailure(err);
         }
       }
     );
@@ -194,12 +204,7 @@ const handler = createMcpHandler(
             ],
           };
         } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return {
-            content: [
-              { type: "text", text: "Error: " + msg },
-            ],
-          };
+          return safeToolFailure(err);
         }
       }
     );
@@ -223,30 +228,22 @@ const handler = createMcpHandler(
             ],
           };
         } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return {
-            content: [
-              { type: "text", text: "Error: " + msg },
-            ],
-          };
+          return safeToolFailure(err);
         }
       }
     );
 
-    // Destination experiences tool
+    // Hotel Ratings is keyed by hotel IDs returned by a hotel search.
     server.tool(
-      "get_destination_experiences",
-      "Get destination experiences and hotel sentiments for a geographic area",
+      "get_hotel_ratings",
+      "Get hotel review sentiment by Amadeus hotel IDs; unavailable ratings return an empty list",
       {
-        north: DestinationExperiencesSchema.shape.north,
-        west: DestinationExperiencesSchema.shape.west,
-        south: DestinationExperiencesSchema.shape.south,
-        east: DestinationExperiencesSchema.shape.east,
+        hotelIds: HotelRatingsSchema.shape.hotelIds,
       },
       async (params) => {
         try {
-          const validatedParams = DestinationExperiencesSchema.parse(params);
-          const result = await getAmadeusClient().getDestinationExperiences(validatedParams);
+          const validatedParams = HotelRatingsSchema.parse(params);
+          const result = await getAmadeusClient().getHotelRatings(validatedParams);
           const outputStr = JSON.stringify(result);
           return {
             content: [
@@ -254,12 +251,7 @@ const handler = createMcpHandler(
             ],
           };
         } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return {
-            content: [
-              { type: "text", text: "Error: " + msg },
-            ],
-          };
+          return safeToolFailure(err);
         }
       }
     );
@@ -284,12 +276,7 @@ const handler = createMcpHandler(
             ],
           };
         } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return {
-            content: [
-              { type: "text", text: "Error: " + msg },
-            ],
-          };
+          return safeToolFailure(err);
         }
       }
     );
@@ -301,46 +288,33 @@ const handler = createMcpHandler(
   {
     basePath: "/api", // this needs to match where the [transport] is located.
     maxDuration: 60,
-    verboseLogs: true,
+    disableSse: true,
+    verboseLogs: process.env.NODE_ENV === "development" && process.env.MCP_VERBOSE_LOGS === "true",
   }
 );
+// This mcp-handler version shares one stateless transport within a process.
+// Serialize its access so overlapping client handshakes cannot steal replies.
+let requestQueue: Promise<void> = Promise.resolve();
+function handleMcp(request: NextRequest): Promise<Response> {
+  const current = requestQueue.then(async () => {
+    const response = await handler(request);
+    await response.clone().text();
+    return response;
+  });
+  requestQueue = current.then(() => {}, () => {});
+  return current;
+}
 // Wrapper functions with authentication
 async function GET(request: NextRequest) {
-  if (!authenticateRequest(request)) {
-    return new Response(
-      JSON.stringify({ 
-        jsonrpc: "2.0", 
-        error: { 
-          code: -32001, 
-          message: "Unauthorized - Bearer token required" 
-        } 
-      }),
-      { 
-        status: 401, 
-        headers: { "Content-Type": "application/json" } 
-      }
-    );
-  }
-  return handler(request);
+  const rejected = rejection(request);
+  if (rejected) return rejected;
+  return handleMcp(request);
 }
 
 async function POST(request: NextRequest) {
-  if (!authenticateRequest(request)) {
-    return new Response(
-      JSON.stringify({ 
-        jsonrpc: "2.0", 
-        error: { 
-          code: -32001, 
-          message: "Unauthorized - Bearer token required" 
-        } 
-      }),
-      { 
-        status: 401, 
-        headers: { "Content-Type": "application/json" } 
-      }
-    );
-  }
-  return handler(request);
+  const rejected = rejection(request);
+  if (rejected) return rejected;
+  return handleMcp(request);
 }
 
 export { GET, POST };

@@ -73,7 +73,7 @@ export async function fetchAllTrips(): Promise<TripRecord[]> {
   const collection = QDRANT_COLLECTIONS.USER_TRIPS;
 
   const allTrips: TripRecord[] = [];
-  let offset: string | number | null = null;
+  let offset: string | number | Record<string, unknown> | null = null;
 
   while (true) {
     const result = await client.scroll(collection, {

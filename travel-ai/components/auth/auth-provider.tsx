@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase/client'
+import { getSupabaseClient } from '@/lib/supabase/client'
 
 interface AuthContextType {
   user: User | null
@@ -21,6 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const supabase = getSupabaseClient()
     // Récupérer la session actuelle
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
@@ -41,7 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error } = await getSupabaseClient().auth.signInWithPassword({
       email,
       password,
     })
@@ -49,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (email: string, password: string, name: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { error } = await getSupabaseClient().auth.signUp({
       email,
       password,
       options: {
@@ -62,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    await getSupabaseClient().auth.signOut()
   }
 
   const value = {

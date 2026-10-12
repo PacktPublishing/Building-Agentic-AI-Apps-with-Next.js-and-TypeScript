@@ -9,7 +9,7 @@ const navigation = [
   { name: "Trips", href: "/dashboard/trips" },
   { name: "Settings", href: "/dashboard/settings" },
   { name: "Profile", href: "/dashboard/profile" },
-]
+] as const
 
 export function Sidebar() {
   const pathname = usePathname()

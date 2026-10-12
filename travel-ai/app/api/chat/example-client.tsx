@@ -77,7 +77,7 @@ export default function ChatExample() {
                                         });
                                         break;
 
-                                    case 'toolCall':
+                                    case 'tool_call_start':
                                         console.log('🔧 Tool call:', event.data);
                                         break;
 
@@ -156,7 +156,7 @@ export default function ChatExample() {
                     <div className="text-center text-gray-400 mt-20">
                         <div className="text-6xl mb-4">💬</div>
                         <p>Start a conversation with the travel agent</p>
-                        <p className="text-sm mt-2">Try: "I want to visit Paris" or "Search for flights to NYC"</p>
+                        <p className="text-sm mt-2">Try: &quot;I want to visit Paris&quot; or &quot;Search for flights to NYC&quot;</p>
                     </div>
                 )}
 

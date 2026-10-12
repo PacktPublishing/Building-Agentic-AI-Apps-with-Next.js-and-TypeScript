@@ -1,5 +1,7 @@
 # Human-in-the-Loop (HITL) Guide
 
+> Historical design sketch below; do not use its old method examples. Current travel tools only search; there is no booking action. The old `invokeWithApproval` and `approveAndContinue` methods remain disabled because they checked state after invocation and could not prevent a tool call. The separate `/api/chat/approval` and `/api/chat/approval/decision` routes now use authenticated, owner-bound PostgreSQL conversations and a pre-tool interrupt policy. No side-effecting production tool is registered. A synthetic counter test verifies interruption, rejection, approval and replay protection across a new graph/checkpointer instance. Before registering a real write tool, require a business-level idempotency key enforced by that operation, explicitly add the tool to the approval policy, and test crash recovery against the actual side effect.
+
 ## What is Human-in-the-Loop?
 
 Human-in-the-Loop (HITL) is a pattern where AI agent execution is **interrupted** to request human approval before performing certain actions, typically before executing tools or making external API calls.
