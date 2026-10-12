@@ -64,11 +64,19 @@ try {
   assert.equal(toolRequest.headers.get('MCP-Protocol-Version'), '2026-07-28');
   assert.equal(toolRequest.headers.get('Mcp-Method'), 'tools/call');
   assert.equal(toolRequest.headers.get('Mcp-Name'), 'search_cities');
-  assert.ok(toolRequest.body.params._meta);
+  assert.equal(toolRequest.body.params._meta['io.modelcontextprotocol/protocolVersion'], '2026-07-28');
+  assert.ok(toolRequest.body.params._meta['io.modelcontextprotocol/clientInfo']);
+  assert.ok(toolRequest.body.params._meta['io.modelcontextprotocol/clientCapabilities']);
   // Replay a self-contained request through a new HTTP connection.
   const replay = await fetch(url, { method: 'POST', headers: toolRequest.headers, body: JSON.stringify(toolRequest.body) });
   assert.equal(replay.status, 200);
   assert.equal(replay.headers.get('Mcp-Session-Id'), null);
+  assert.ok((await replay.text()).includes('fixture-city'));
+  for (const [origin, status] of [['https://evil.example', 403], ['null', 403], ['https://trusted.example', 200]]) {
+    const headers = new Headers(toolRequest.headers);
+    headers.set('Origin', origin);
+    assert.equal((await fetch(url, { method: 'POST', headers, body: JSON.stringify(toolRequest.body) })).status, status);
+  }
   for (const authorization of [undefined, 'Bearer wrong-token']) {
     const headers = { 'Content-Type': 'application/json' };
     if (authorization) headers.Authorization = authorization;
@@ -81,7 +89,7 @@ try {
     protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'legacy-test', version: '1' },
   } }) });
   assert.equal(legacy.status, 400);
-  console.log('PASS HTTP: modern discovery; self-contained request replay; method/name/version headers; no initialize/session header; Bearer auth; legacy rejection; tool success/error');
+  console.log('PASS HTTP: modern discovery; self-contained request replay; method/name/version headers; no initialize/session header; Bearer auth; Origin allowlist; legacy rejection; tool success/error');
   console.log(JSON.stringify(requests.map(r => ({ method: r.method, protocol: r.headers.get('MCP-Protocol-Version'), route: r.headers.get('Mcp-Method'), name: r.headers.get('Mcp-Name'), metadata: Object.keys(r.body?.params?._meta || {}) })), null, 2));
 } finally { await http.close(); }
 const appRequire = createRequire(path.join(root, 'travel-ai/package.json'));

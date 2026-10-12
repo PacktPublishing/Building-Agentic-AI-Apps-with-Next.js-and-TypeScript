@@ -1,0 +1,4 @@
+COMMAND pnpm exec tsx --tsconfig tsconfig.json ../docs/mcp-v2/verify-client.ts
+NODE 20.20.2
+EXIT 0
+PASS actual Travel AI MCP singleton: validation, unprefixed names, modern invocation

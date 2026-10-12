@@ -1,0 +1,52 @@
+COMMAND node docs/mcp-v2/verify-runtime.mjs
+NODE 20.20.2
+EXIT 0
+PASS STDIO: modern discovery; 8 tools; 3 resources; 3 prompts; resource/prompt read; success/error tool calls
+PASS HTTP: modern discovery; self-contained request replay; method/name/version headers; no initialize/session header; Bearer auth; Origin allowlist; legacy rejection; tool success/error
+[
+  {
+    "method": "server/discover",
+    "protocol": "2026-07-28",
+    "route": "server/discover",
+    "name": null,
+    "metadata": [
+      "io.modelcontextprotocol/protocolVersion",
+      "io.modelcontextprotocol/clientInfo",
+      "io.modelcontextprotocol/clientCapabilities"
+    ]
+  },
+  {
+    "method": "tools/list",
+    "protocol": "2026-07-28",
+    "route": "tools/list",
+    "name": null,
+    "metadata": [
+      "io.modelcontextprotocol/protocolVersion",
+      "io.modelcontextprotocol/clientInfo",
+      "io.modelcontextprotocol/clientCapabilities"
+    ]
+  },
+  {
+    "method": "tools/call",
+    "protocol": "2026-07-28",
+    "route": "tools/call",
+    "name": "search_cities",
+    "metadata": [
+      "io.modelcontextprotocol/protocolVersion",
+      "io.modelcontextprotocol/clientInfo",
+      "io.modelcontextprotocol/clientCapabilities"
+    ]
+  },
+  {
+    "method": "tools/call",
+    "protocol": "2026-07-28",
+    "route": "tools/call",
+    "name": "search_cities",
+    "metadata": [
+      "io.modelcontextprotocol/protocolVersion",
+      "io.modelcontextprotocol/clientInfo",
+      "io.modelcontextprotocol/clientCapabilities"
+    ]
+  }
+]
+PASS LangChain adapter: modern tool discovery and invocation over real HTTP

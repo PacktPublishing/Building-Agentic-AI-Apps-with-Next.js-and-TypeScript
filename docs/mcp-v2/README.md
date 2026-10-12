@@ -2,7 +2,7 @@
 
 The HTTP and STDIO packages use `@modelcontextprotocol/server` 2.3.1 and Zod 4. Travel AI uses `MCPAdapter` 2.0.1. SDK versions and protocol revisions are different: the first-party servers require stateless protocol **2026-07-28**.
 
-Each MCP request carries its own protocol/client metadata. SDK clients generate it and the corresponding HTTP headers. The native server factories create a server for each request, reject legacy initialization, and return no MCP session ID. Amadeus OAuth caching is provider state; LangGraph thread IDs and Postgres checkpoints are application state. They persist independently of MCP requests.
+Each MCP request carries its own protocol/client metadata. SDK clients generate it and the corresponding HTTP headers. The HTTP factory creates a server for each request; STDIO keeps an instance for the connection lifetime. Both reject legacy initialization. Modern HTTP returns no MCP session ID. Amadeus OAuth caching is provider state; LangGraph thread IDs and Postgres checkpoints are application state. They persist independently of MCP requests.
 
 HTTP authentication, Origin restrictions, sanitized tool errors, hotel ID ratings, durable approval and replay protection retain the current GitHub behavior. Tool names are unprefixed so the Travel AI tool policy and UI keep their existing contracts. The optional Supabase client negotiates automatically because its third-party server may still use a legacy protocol.
 
@@ -27,7 +27,7 @@ Use an isolated test database. `test:run` excludes only the repository's three l
 First build the STDIO and HTTP packages. In one terminal from the workspace root, start the built HTTP server with synthetic credentials and the verification-only provider preload:
 
 ```sh
-AMADEUS_CLIENT_ID=fixture AMADEUS_CLIENT_SECRET=fixture MCP_BEARER_TOKEN=book-verification-only NODE_OPTIONS="--require=$(pwd)/docs/mcp-v2/fake-amadeus.cjs" pnpm --filter mcp-amadeus start --hostname 127.0.0.1 --port 3199
+AMADEUS_CLIENT_ID=fixture AMADEUS_CLIENT_SECRET=fixture MCP_BEARER_TOKEN=book-verification-only MCP_ALLOWED_ORIGINS=https://trusted.example NODE_OPTIONS="--require=$(pwd)/docs/mcp-v2/fake-amadeus.cjs" pnpm --filter mcp-amadeus start --hostname 127.0.0.1 --port 3199
 ```
 
 In another terminal:

@@ -1,3 +1,7 @@
+COMMAND pnpm --filter my-v0-project check
+NODE 20.20.2
+EXIT 0
+Isolated test Postgres: loopback port 55449 (Travel AI only). Synthetic configuration; no live-provider calls.
 
 > my-v0-project@0.1.0 check /Users/salimlaimeche/Desktop/packt/Building-Agentic-AI-Apps-with-Next.js-and-TypeScript/travel-ai
 > pnpm lint && pnpm typecheck && pnpm test:run && pnpm build

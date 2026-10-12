@@ -18,7 +18,7 @@ The included tests use synthetic inputs and a local pinned modern MCP client/ser
 
 ## MCP v2
 
-This example uses `@modelcontextprotocol/server` 2.3.1 and protocol `2026-07-28`. `serveStdio` creates a server for each self-contained request and rejects legacy initialization. Tools, resources and prompts use `registerTool`, `registerResource` and `registerPrompt` with Zod 4 schemas.
+This example uses `@modelcontextprotocol/server` 2.3.1 and protocol `2026-07-28`. `serveStdio` keeps a server instance for the connection lifetime and rejects legacy initialization. Every modern request still carries its own protocol/client metadata; connection lifetime does not create conversation memory. Tools, resources and prompts use `registerTool`, `registerResource` and `registerPrompt` with Zod 4 schemas.
 
 ```sh
 pnpm --filter mcp-amadeus-stdio inspect

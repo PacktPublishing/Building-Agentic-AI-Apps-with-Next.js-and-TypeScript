@@ -1,3 +1,7 @@
+COMMAND pnpm --filter mcp-amadeus test && pnpm --filter mcp-amadeus exec tsc --noEmit && pnpm --filter mcp-amadeus build
+NODE 20.20.2
+EXIT 0
+Isolated test Postgres: loopback port 55449 (Travel AI only). Synthetic configuration; no live-provider calls.
 
 > mcp-amadeus@0.1.0 test /Users/salimlaimeche/Desktop/packt/Building-Agentic-AI-Apps-with-Next.js-and-TypeScript/mcp-amadeus
 > node --import tsx --test --test-force-exit tests/*.test.ts
