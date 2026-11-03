@@ -26,12 +26,12 @@ This project follows **Clean Architecture** principles with three distinct layer
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
-│  Backend Layer (lib/)                                        │
+│  Backend Layer (lib/)                                       │
 │  Services, Database, Auth, Validations, External APIs       │
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
-│  AI Layer (ai/)                                              │
+│  AI Layer (ai/)                                             │
 │  RAG Pipeline, LangGraph Agents, Prompts, Tools             │
 └─────────────────────────────────────────────────────────────┘
 ```
