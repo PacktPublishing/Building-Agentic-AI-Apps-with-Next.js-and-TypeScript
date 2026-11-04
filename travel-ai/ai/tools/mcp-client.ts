@@ -1,48 +1,52 @@
 /**
  * MCP Client Singleton
- * 
- * Manages the Multi-Server MCP Client for external tool integrations
+ *
+ * Manages the stateless MCP adapter for external tool integrations
  */
 
-import { MultiServerMCPClient } from "@langchain/mcp-adapters";
-import { config } from "../../config";
-import { validateFeature } from '@/lib/config/feature-env';
+import { MCPAdapter } from '@langchain/mcp-adapters'
+import { config } from '../../config'
+import { validateFeature } from '@/lib/config/feature-env'
 
-let mcpClientInstance: MultiServerMCPClient | null = null;
+let mcpClientInstance: MCPAdapter | null = null
 
 /**
  * Get or create the MCP client singleton
  */
-export async function getMcpClient(): Promise<MultiServerMCPClient> {
-    validateFeature('chat');
-    if (!mcpClientInstance) {
-        mcpClientInstance = new MultiServerMCPClient({
-            amadeus: {
-                transport: "http",
-                url: config.amadeus_url,
-                headers: {
-                    "Authorization": `Bearer ${config.amadeus_bearer_token}`
-                }
-            },
-        });
-    }
-    return mcpClientInstance;
+export async function getMcpClient(): Promise<MCPAdapter> {
+  validateFeature('chat')
+  if (!mcpClientInstance) {
+    mcpClientInstance = new MCPAdapter({
+      prefixToolNameWithServerName: false,
+      servers: {
+        amadeus: {
+          transport: 'http',
+          mode: 'modern',
+          url: config.amadeus_url,
+          headers: {
+            Authorization: `Bearer ${config.amadeus_bearer_token}`,
+          },
+        },
+      },
+    })
+  }
+  return mcpClientInstance
 }
 
 /**
  * Get tools from MCP servers
  */
 export async function getMcpTools() {
-    const client = await getMcpClient();
-    return client.getTools();
+  const client = await getMcpClient()
+  return client.listTools()
 }
 
 /**
  * Close the MCP client connection
  */
 export async function closeMcpClient(): Promise<void> {
-    if (mcpClientInstance) {
-        await mcpClientInstance.close();
-        mcpClientInstance = null;
-    }
+  if (mcpClientInstance) {
+    await mcpClientInstance.close()
+    mcpClientInstance = null
+  }
 }

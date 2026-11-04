@@ -1,5 +1,6 @@
+import { z } from "zod";
 // app/api/[transport]/route.ts
-import { createMcpHandler } from "mcp-handler";
+import { McpServer, createMcpHandler } from "@modelcontextprotocol/server";
 import { AmadeusClient, getAmadeusConfig } from "@/lib/tools/amadeus";
 import {
   FlightSearchSchema,
@@ -45,8 +46,14 @@ function allowsOrigin(request: NextRequest): boolean {
   if (origin === null) return true; // Native MCP clients authenticate without Origin.
   try {
     const parsed = new URL(origin);
-    if (!["http:", "https:"].includes(parsed.protocol) || parsed.origin !== origin) return false;
-    const allowed = (process.env.MCP_ALLOWED_ORIGINS ?? "").split(",").map((value) => value.trim());
+    if (
+      !["http:", "https:"].includes(parsed.protocol) ||
+      parsed.origin !== origin
+    )
+      return false;
+    const allowed = (process.env.MCP_ALLOWED_ORIGINS ?? "")
+      .split(",")
+      .map((value) => value.trim());
     return allowed.includes(origin);
   } catch {
     return false;
@@ -54,7 +61,8 @@ function allowsOrigin(request: NextRequest): boolean {
 }
 
 function rejection(request: NextRequest): Response | null {
-  if (new URL(request.url).pathname !== "/api/mcp") return new Response(null, { status: 404 });
+  if (new URL(request.url).pathname !== "/api/mcp")
+    return new Response(null, { status: 404 });
   if (!allowsOrigin(request)) return new Response("Forbidden", { status: 403 });
   if (!authenticateRequest(request)) {
     return new Response("Unauthorized", {
@@ -66,132 +74,152 @@ function rejection(request: NextRequest): Response | null {
 }
 
 function safeToolFailure(error: unknown) {
-  const message = error instanceof ZodError ? "Invalid tool input"
-    : error instanceof Error && error.message === "Amadeus configuration is missing or invalid"
-      ? error.message : "Travel provider request unavailable";
-  return { isError: true, content: [{ type: "text" as const, text: `Error: ${message}` }] };
+  const message =
+    error instanceof ZodError
+      ? "Invalid tool input"
+      : error instanceof Error &&
+          error.message === "Amadeus configuration is missing or invalid"
+        ? error.message
+        : "Travel provider request unavailable";
+  return {
+    isError: true,
+    content: [{ type: "text" as const, text: `Error: ${message}` }],
+  };
 }
 
 const handler = createMcpHandler(
-  (server) => {
+  () => {
+    const server = new McpServer({
+      name: "amadeus-travel-http",
+      version: "2.0.0",
+    });
     // Flight search tool
-    server.tool(
+    server.registerTool(
       "search_flights",
-      "Search for flights between two airports with various filters and options",
       {
-        origin: FlightSearchSchema.shape.origin,
-        destination: FlightSearchSchema.shape.destination,
-        departureDate: FlightSearchSchema.shape.departureDate,
-        returnDate: FlightSearchSchema.shape.returnDate,
-        adults: FlightSearchSchema.shape.adults,
-        children: FlightSearchSchema.shape.children,
-        infants: FlightSearchSchema.shape.infants,
-        travelClass: FlightSearchSchema.shape.travelClass,
-        nonStop: FlightSearchSchema.shape.nonStop,
-        maxPrice: FlightSearchSchema.shape.maxPrice,
-        currency: FlightSearchSchema.shape.currency,
+        description:
+          "Search for flights between two airports with various filters and options",
+        inputSchema: z.object({
+          origin: FlightSearchSchema.shape.origin,
+          destination: FlightSearchSchema.shape.destination,
+          departureDate: FlightSearchSchema.shape.departureDate,
+          returnDate: FlightSearchSchema.shape.returnDate,
+          adults: FlightSearchSchema.shape.adults,
+          children: FlightSearchSchema.shape.children,
+          infants: FlightSearchSchema.shape.infants,
+          travelClass: FlightSearchSchema.shape.travelClass,
+          nonStop: FlightSearchSchema.shape.nonStop,
+          maxPrice: FlightSearchSchema.shape.maxPrice,
+          currency: FlightSearchSchema.shape.currency,
+        }),
       },
       async (params) => {
         try {
           const validatedParams = FlightSearchSchema.parse(params);
-          const result = await getAmadeusClient().searchFlights(validatedParams);
+          const result =
+            await getAmadeusClient().searchFlights(validatedParams);
           const outputStr = JSON.stringify(result);
           return {
-            content: [
-              { type: "text", text: outputStr },
-            ],
+            content: [{ type: "text", text: outputStr }],
           };
         } catch (err: unknown) {
           return safeToolFailure(err);
         }
-      }
+      },
     );
 
     // Flight price analysis tool
-    server.tool(
+    server.registerTool(
       "analyze_flight_prices",
-      "Get flight price analysis and predictions for a specific route",
       {
-        origin: FlightPriceAnalysisSchema.shape.origin,
-        destination: FlightPriceAnalysisSchema.shape.destination,
-        departureDate: FlightPriceAnalysisSchema.shape.departureDate,
-        currency: FlightPriceAnalysisSchema.shape.currency,
+        description:
+          "Get flight price analysis and predictions for a specific route",
+        inputSchema: z.object({
+          origin: FlightPriceAnalysisSchema.shape.origin,
+          destination: FlightPriceAnalysisSchema.shape.destination,
+          departureDate: FlightPriceAnalysisSchema.shape.departureDate,
+          currency: FlightPriceAnalysisSchema.shape.currency,
+        }),
       },
       async (params) => {
         try {
           const validatedParams = FlightPriceAnalysisSchema.parse(params);
-          const result = await getAmadeusClient().analyzeFlightPrices(validatedParams);
+          const result =
+            await getAmadeusClient().analyzeFlightPrices(validatedParams);
           const outputStr = JSON.stringify(result);
           return {
-            content: [
-              { type: "text", text: outputStr },
-            ],
+            content: [{ type: "text", text: outputStr }],
           };
         } catch (err: unknown) {
           return safeToolFailure(err);
         }
-      }
+      },
     );
 
     // Airport search tool
-    server.tool(
+    server.registerTool(
       "search_airports",
-      "Search for airports by name, city, or IATA code",
       {
-        keyword: AirportSearchSchema.shape.keyword,
-        countryCode: AirportSearchSchema.shape.countryCode,
+        description: "Search for airports by name, city, or IATA code",
+        inputSchema: z.object({
+          keyword: AirportSearchSchema.shape.keyword,
+          countryCode: AirportSearchSchema.shape.countryCode,
+        }),
       },
       async (params) => {
         try {
           const validatedParams = AirportSearchSchema.parse(params);
-          const result = await getAmadeusClient().searchAirports(validatedParams);
+          const result =
+            await getAmadeusClient().searchAirports(validatedParams);
           const outputStr = JSON.stringify(result);
           return {
-            content: [
-              { type: "text", text: outputStr },
-            ],
+            content: [{ type: "text", text: outputStr }],
           };
         } catch (err: unknown) {
           return safeToolFailure(err);
         }
-      }
+      },
     );
 
     // Airline info tool
-    server.tool(
+    server.registerTool(
       "get_airline_info",
-      "Get information about airlines by their IATA codes",
       {
-        airlineCodes: AirlineSearchSchema.shape.airlineCodes,
+        description: "Get information about airlines by their IATA codes",
+        inputSchema: z.object({
+          airlineCodes: AirlineSearchSchema.shape.airlineCodes,
+        }),
       },
       async (params) => {
         try {
           const validatedParams = AirlineSearchSchema.parse(params);
-          const result = await getAmadeusClient().getAirlineInfo(validatedParams);
+          const result =
+            await getAmadeusClient().getAirlineInfo(validatedParams);
           const outputStr = JSON.stringify(result);
           return {
-            content: [
-              { type: "text", text: outputStr },
-            ],
+            content: [{ type: "text", text: outputStr }],
           };
         } catch (err: unknown) {
           return safeToolFailure(err);
         }
-      }
+      },
     );
 
     // Hotel search tool
-    server.tool(
+    server.registerTool(
       "search_hotels",
-      "Search for hotels in a specific city with dates and guest information",
       {
-        cityCode: HotelSearchSchema.shape.cityCode,
-        checkInDate: HotelSearchSchema.shape.checkInDate,
-        checkOutDate: HotelSearchSchema.shape.checkOutDate,
-        adults: HotelSearchSchema.shape.adults,
-        roomQuantity: HotelSearchSchema.shape.roomQuantity,
-        currency: HotelSearchSchema.shape.currency,
-        bestRateOnly: HotelSearchSchema.shape.bestRateOnly,
+        description:
+          "Search for hotels in a specific city with dates and guest information",
+        inputSchema: z.object({
+          cityCode: HotelSearchSchema.shape.cityCode,
+          checkInDate: HotelSearchSchema.shape.checkInDate,
+          checkOutDate: HotelSearchSchema.shape.checkOutDate,
+          adults: HotelSearchSchema.shape.adults,
+          roomQuantity: HotelSearchSchema.shape.roomQuantity,
+          currency: HotelSearchSchema.shape.currency,
+          bestRateOnly: HotelSearchSchema.shape.bestRateOnly,
+        }),
       },
       async (params) => {
         try {
@@ -199,23 +227,23 @@ const handler = createMcpHandler(
           const result = await getAmadeusClient().searchHotels(validatedParams);
           const outputStr = JSON.stringify(result);
           return {
-            content: [
-              { type: "text", text: outputStr },
-            ],
+            content: [{ type: "text", text: outputStr }],
           };
         } catch (err: unknown) {
           return safeToolFailure(err);
         }
-      }
+      },
     );
 
     // City search tool
-    server.tool(
+    server.registerTool(
       "search_cities",
-      "Search for cities by name or IATA code",
       {
-        keyword: CitySearchSchema.shape.keyword,
-        countryCode: CitySearchSchema.shape.countryCode,
+        description: "Search for cities by name or IATA code",
+        inputSchema: z.object({
+          keyword: CitySearchSchema.shape.keyword,
+          countryCode: CitySearchSchema.shape.countryCode,
+        }),
       },
       async (params) => {
         try {
@@ -223,98 +251,79 @@ const handler = createMcpHandler(
           const result = await getAmadeusClient().searchCities(validatedParams);
           const outputStr = JSON.stringify(result);
           return {
-            content: [
-              { type: "text", text: outputStr },
-            ],
+            content: [{ type: "text", text: outputStr }],
           };
         } catch (err: unknown) {
           return safeToolFailure(err);
         }
-      }
+      },
     );
 
     // Hotel Ratings is keyed by hotel IDs returned by a hotel search.
-    server.tool(
+    server.registerTool(
       "get_hotel_ratings",
-      "Get hotel review sentiment by Amadeus hotel IDs; unavailable ratings return an empty list",
       {
-        hotelIds: HotelRatingsSchema.shape.hotelIds,
+        description:
+          "Get hotel review sentiment by Amadeus hotel IDs; unavailable ratings return an empty list",
+        inputSchema: z.object({
+          hotelIds: HotelRatingsSchema.shape.hotelIds,
+        }),
       },
       async (params) => {
         try {
           const validatedParams = HotelRatingsSchema.parse(params);
-          const result = await getAmadeusClient().getHotelRatings(validatedParams);
+          const result =
+            await getAmadeusClient().getHotelRatings(validatedParams);
           const outputStr = JSON.stringify(result);
           return {
-            content: [
-              { type: "text", text: outputStr },
-            ],
+            content: [{ type: "text", text: outputStr }],
           };
         } catch (err: unknown) {
           return safeToolFailure(err);
         }
-      }
+      },
     );
 
     // Tours and activities tool
-    server.tool(
+    server.registerTool(
       "search_tours_activities",
-      "Search for tours and activities near a specific location",
       {
-        latitude: ToursActivitiesSchema.shape.latitude,
-        longitude: ToursActivitiesSchema.shape.longitude,
-        radius: ToursActivitiesSchema.shape.radius,
+        description: "Search for tours and activities near a specific location",
+        inputSchema: z.object({
+          latitude: ToursActivitiesSchema.shape.latitude,
+          longitude: ToursActivitiesSchema.shape.longitude,
+          radius: ToursActivitiesSchema.shape.radius,
+        }),
       },
       async (params) => {
         try {
           const validatedParams = ToursActivitiesSchema.parse(params);
-          const result = await getAmadeusClient().searchToursActivities(validatedParams);
+          const result =
+            await getAmadeusClient().searchToursActivities(validatedParams);
           const outputStr = JSON.stringify(result);
           return {
-            content: [
-              { type: "text", text: outputStr },
-            ],
+            content: [{ type: "text", text: outputStr }],
           };
         } catch (err: unknown) {
           return safeToolFailure(err);
         }
-      }
+      },
     );
+    return server;
   },
-  {
-    // Optional server options
-
-  },
-  {
-    basePath: "/api", // this needs to match where the [transport] is located.
-    maxDuration: 60,
-    disableSse: true,
-    verboseLogs: process.env.NODE_ENV === "development" && process.env.MCP_VERBOSE_LOGS === "true",
-  }
+  { legacy: "reject" },
 );
-// This mcp-handler version shares one stateless transport within a process.
-// Serialize its access so overlapping client handshakes cannot steal replies.
-let requestQueue: Promise<void> = Promise.resolve();
-function handleMcp(request: NextRequest): Promise<Response> {
-  const current = requestQueue.then(async () => {
-    const response = await handler(request);
-    await response.clone().text();
-    return response;
-  });
-  requestQueue = current.then(() => {}, () => {});
-  return current;
-}
 // Wrapper functions with authentication
 async function GET(request: NextRequest) {
   const rejected = rejection(request);
   if (rejected) return rejected;
-  return handleMcp(request);
+  return handler.fetch(request);
 }
 
 async function POST(request: NextRequest) {
   const rejected = rejection(request);
   if (rejected) return rejected;
-  return handleMcp(request);
+  return handler.fetch(request);
 }
 
 export { GET, POST };

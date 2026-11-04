@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/server";
 
 /**
  * Register reusable prompt templates on the MCP server.
@@ -10,16 +10,27 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
  */
 export function registerTravelPrompts(server: McpServer) {
   // ── plan_trip ──────────────────────────────────────────────────────────
-  server.prompt(
+  server.registerPrompt(
     "plan_trip",
-    "Plan a complete trip including flights, hotels, and activities",
     {
-      origin: z.string().describe("Departure city or IATA airport code"),
-      destination: z.string().describe("Destination city or IATA airport code"),
-      departureDate: z.string().describe("Departure date (YYYY-MM-DD)"),
-      returnDate: z.string().describe("Return date (YYYY-MM-DD)"),
-      travelers: z.string().optional().describe("Number of travelers (default: 1)"),
-      budget: z.string().optional().describe("Approximate budget and currency (e.g. '2000 USD')"),
+      description:
+        "Plan a complete trip including flights, hotels, and activities",
+      argsSchema: z.object({
+        origin: z.string().describe("Departure city or IATA airport code"),
+        destination: z
+          .string()
+          .describe("Destination city or IATA airport code"),
+        departureDate: z.string().describe("Departure date (YYYY-MM-DD)"),
+        returnDate: z.string().describe("Return date (YYYY-MM-DD)"),
+        travelers: z
+          .string()
+          .optional()
+          .describe("Number of travelers (default: 1)"),
+        budget: z
+          .string()
+          .optional()
+          .describe("Approximate budget and currency (e.g. '2000 USD')"),
+      }),
     },
     async (args) => ({
       messages: [
@@ -49,13 +60,16 @@ export function registerTravelPrompts(server: McpServer) {
   );
 
   // ── compare_flights ────────────────────────────────────────────────────
-  server.prompt(
+  server.registerPrompt(
     "compare_flights",
-    "Compare flight options between two cities with price analysis",
     {
-      origin: z.string().describe("Departure IATA airport code"),
-      destination: z.string().describe("Arrival IATA airport code"),
-      date: z.string().describe("Travel date (YYYY-MM-DD)"),
+      description:
+        "Compare flight options between two cities with price analysis",
+      argsSchema: z.object({
+        origin: z.string().describe("Departure IATA airport code"),
+        destination: z.string().describe("Arrival IATA airport code"),
+        date: z.string().describe("Travel date (YYYY-MM-DD)"),
+      }),
     },
     async (args) => ({
       messages: [
@@ -82,11 +96,14 @@ export function registerTravelPrompts(server: McpServer) {
   );
 
   // ── explore_destination ────────────────────────────────────────────────
-  server.prompt(
+  server.registerPrompt(
     "explore_destination",
-    "Discover what a destination has to offer: hotels, activities, and local tips",
     {
-      city: z.string().describe("Destination city name or IATA code"),
+      description:
+        "Discover what a destination has to offer: hotels, activities, and local tips",
+      argsSchema: z.object({
+        city: z.string().describe("Destination city name or IATA code"),
+      }),
     },
     async (args) => ({
       messages: [

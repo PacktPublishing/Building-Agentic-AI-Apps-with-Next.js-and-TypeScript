@@ -7,7 +7,7 @@
 
 import { ChatAnthropic } from '@langchain/anthropic'
 import { createAgent } from 'langchain'
-import { DynamicStructuredTool } from '@langchain/core/tools'
+import { DynamicStructuredTool, type ClientTool } from '@langchain/core/tools'
 import { z } from 'zod'
 import { config } from '../../../config'
 import { getMcpTools } from '../../tools/mcp-client'
@@ -82,9 +82,10 @@ export async function createFlightAgent() {
     },
   })
 
+  const tools: ClientTool[] = [...flightTools, reportResultsTool]
   const agent = createAgent({
     model,
-    tools: [...flightTools, reportResultsTool],
+    tools,
     systemPrompt: FLIGHT_AGENT_PROMPT,
   })
 

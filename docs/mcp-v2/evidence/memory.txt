@@ -1,0 +1,4 @@
+COMMAND node docs/mcp-v2/verify-memory.mjs
+NODE 20.20.2
+EXIT 0
+PASS application memory: independent thread state persists across invocations; no MCP session is required

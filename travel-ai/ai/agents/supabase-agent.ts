@@ -4,8 +4,8 @@ import { createAgent } from "langchain";
 import { DynamicStructuredTool } from "@langchain/core/tools";
 import { config } from "../../config";
 import { z } from "zod";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { Client } from "@modelcontextprotocol/client";
+import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 
 class SupabaseAgent {
     private model: ChatAnthropic;
@@ -52,7 +52,8 @@ class SupabaseAgent {
             name: "supabase-agent",
             version: "1.0.0"
         }, {
-            capabilities: {}
+            capabilities: {},
+            versionNegotiation: { mode: "auto" }
         });
 
         // Configurer le transport stdio

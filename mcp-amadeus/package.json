@@ -10,14 +10,13 @@
     "test": "node --import tsx --test --test-force-exit tests/*.test.ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.5",
     "amadeus": "^8.0.0",
     "dotenv": "^16.4.7",
-    "mcp-handler": "^1.0.2",
     "next": "15.5.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "zod": "^3.25.76"
+    "zod": "^4.4.3",
+    "@modelcontextprotocol/server": "2.3.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -29,7 +28,8 @@
     "eslint-config-next": "15.5.2",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "tsx": "^4.19.0"
+    "tsx": "^4.19.0",
+    "@modelcontextprotocol/client": "2.3.1"
   },
   "packageManager": "pnpm@10.14.0+sha512.ad27a79641b49c3e481a16a805baa71817a04bbe06a38d17e60e2eaee83f6a146c6a688125f5792e48dd5ba30e7da52a5cda4c3992b9ccf333f9ce223af84748"
 }

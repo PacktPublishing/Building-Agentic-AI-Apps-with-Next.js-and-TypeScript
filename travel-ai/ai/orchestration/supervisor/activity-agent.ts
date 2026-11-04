@@ -7,7 +7,7 @@
 
 import { ChatAnthropic } from '@langchain/anthropic'
 import { createAgent } from 'langchain'
-import { DynamicStructuredTool } from '@langchain/core/tools'
+import { DynamicStructuredTool, type ClientTool } from '@langchain/core/tools'
 import { z } from 'zod'
 import { config } from '../../../config'
 import { getMcpTools } from '../../tools/mcp-client'
@@ -89,9 +89,10 @@ export async function createActivityAgent() {
     },
   })
 
+  const tools: ClientTool[] = [...activityTools, reportResultsTool]
   const agent = createAgent({
     model,
-    tools: [...activityTools, reportResultsTool],
+    tools,
     systemPrompt: ACTIVITY_AGENT_PROMPT,
   })
 

@@ -1,0 +1,2 @@
+PASS: no active SDK v1 imports or deprecated server registrations in tracked source.
+Baseline fb98a9b9444c10b5596dfc3b93ce63867c6df217 preserved on main.

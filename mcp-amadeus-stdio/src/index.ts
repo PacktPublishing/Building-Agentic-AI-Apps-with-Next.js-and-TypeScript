@@ -14,8 +14,8 @@
 
 import "dotenv/config";
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { McpServer } from "@modelcontextprotocol/server";
+import { serveStdio } from "@modelcontextprotocol/server/stdio";
 
 import { AmadeusClient, getAmadeusConfig } from "./amadeus/client.js";
 import { registerFlightTools } from "./tools/flights.js";
@@ -41,23 +41,26 @@ function getClient(): AmadeusClient {
 
 // ── MCP server ───────────────────────────────────────────────────────────────
 
-const server = new McpServer({
-  name: "amadeus-travel-stdio",
-  version: "1.0.0",
-});
+function createServer() {
+  const server = new McpServer({
+    name: "amadeus-travel-stdio",
+    version: "2.0.0",
+  });
 
-// Register all MCP primitives
-registerFlightTools(server, getClient);
-registerHotelTools(server, getClient);
-registerLocationTools(server, getClient);
-registerTravelResources(server);
-registerTravelPrompts(server);
+  // Register all MCP primitives
+  registerFlightTools(server, getClient);
+  registerHotelTools(server, getClient);
+  registerLocationTools(server, getClient);
+  registerTravelResources(server);
+  registerTravelPrompts(server);
+
+  return server;
+}
 
 // ── Connect via STDIO transport ──────────────────────────────────────────────
 
 async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  await serveStdio(createServer, { legacy: "reject" });
 
   // Log to stderr so it doesn't pollute the JSON-RPC channel on stdout
   console.error("Amadeus MCP STDIO server running – waiting for requests …");

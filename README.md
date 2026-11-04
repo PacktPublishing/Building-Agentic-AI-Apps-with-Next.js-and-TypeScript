@@ -90,7 +90,7 @@ travel-ai/
 
 ### Prerequisites
 
-- Node.js 18+ (recommended: Node.js 20+)
+- Node.js 20.10+ (Node.js 20 for the Travel AI release checks)
 - npm, yarn, or pnpm
 
 ### Installation & Setup
@@ -130,9 +130,9 @@ Navigate to [http://localhost:3000](http://localhost:3000)
 ### Windows-specific Notes
 
 - **Terminal:** Use PowerShell or Windows Terminal. If Corepack is disabled, enable it once with `corepack enable pnpm` (run the shell as administrator if permission errors occur).
-- **Database commands:** `pnpm db:push` and related scripts run `cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit ...`, so they behave the same on Windows, macOS, and Linux.
+- **Database commands:** run the scripts in `travel-ai`; TLS verification remains enabled.
 - **Execution policy:** If PowerShell blocks pnpm scripts, run `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` once and restart the terminal.
-- **TLS warning:** The database scripts temporarily disable TLS verification for local development. Re-enable certificate validation (`NODE_TLS_REJECT_UNAUTHORIZED` unset) before pushing to production environments.
+- **TLS:** configure `POSTGRES_CA_CERT` for databases using a private certificate authority.
 
 ## Available Scripts
 
@@ -202,3 +202,7 @@ See `.env.example` for required environment variables.
 ## License
 
 MIT License - see LICENSE file for details
+
+## MCP v2 companion examples
+
+The workspace HTTP and STDIO servers use SDK 2.3.1 and stateless protocol 2026-07-28. Travel AI uses MCPAdapter 2.0.1 while keeping conversation memory and approvals in application checkpoints. See [setup and reproducible verification](docs/mcp-v2/README.md).

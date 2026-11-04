@@ -1,6 +1,6 @@
 # Amadeus MCP over STDIO (Chapter 8)
 
-From a clean repository checkout, use Node.js 22 and pnpm 10.14.0:
+From a clean repository checkout, use Node.js 20.10+ and pnpm 10.14.0:
 
 ```sh
 pnpm install --frozen-lockfile
@@ -14,4 +14,14 @@ Inputs use uppercase IATA airport/city codes, uppercase ISO country and currency
 
 Use `search_hotels` to obtain Amadeus hotel IDs. `get_hotel_ratings` accepts one to three eight-character IDs, for example `{ "hotelIds": ["XKPARC12"] }`. It calls Hotel Ratings with `hotelIds`; it does not accept geographic bounds or provide general destination experiences. Empty ratings return `status: "unavailable"` and an empty data array. A provider error returns `isError: true` instead. The destination prompt reflects this sequence.
 
-The included tests use synthetic inputs and a local MCP client/server handshake. They do not verify live Amadeus account entitlements or real ratings.
+The included tests use synthetic inputs and a local pinned modern MCP client/server connection. They do not verify live Amadeus account entitlements or real ratings.
+
+## MCP v2
+
+This example uses `@modelcontextprotocol/server` 2.3.1 and protocol `2026-07-28`. `serveStdio` keeps a server instance for the connection lifetime and rejects legacy initialization. Every modern request still carries its own protocol/client metadata; connection lifetime does not create conversation memory. Tools, resources and prompts use `registerTool`, `registerResource` and `registerPrompt` with Zod 4 schemas.
+
+```sh
+pnpm --filter mcp-amadeus-stdio inspect
+```
+
+The pinned Inspector 2.10.1 requires Node.js 22.19+ and starts in modern protocol mode. The server and CI themselves run on Node.js 20.10+. An SDK v2 client must explicitly pin `2026-07-28`; its default negotiation is legacy. Application conversation memory lives in LangGraph checkpoints, independently of the MCP transport.

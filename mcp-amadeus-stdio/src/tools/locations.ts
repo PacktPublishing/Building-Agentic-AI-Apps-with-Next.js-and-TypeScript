@@ -1,4 +1,5 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
+import { McpServer } from "@modelcontextprotocol/server";
 import { AmadeusClient } from "../amadeus/client.js";
 import {
   AirportSearchSchema,
@@ -16,12 +17,14 @@ export function registerLocationTools(
   getClient: () => AmadeusClient,
 ) {
   // ── search_airports ──────────────────────────────────────────────────
-  server.tool(
+  server.registerTool(
     "search_airports",
-    "Search for airports by name, city, or IATA code",
     {
-      keyword: AirportSearchSchema.shape.keyword,
-      countryCode: AirportSearchSchema.shape.countryCode,
+      description: "Search for airports by name, city, or IATA code",
+      inputSchema: z.object({
+        keyword: AirportSearchSchema.shape.keyword,
+        countryCode: AirportSearchSchema.shape.countryCode,
+      }),
     },
     async (params) => {
       try {
@@ -37,11 +40,13 @@ export function registerLocationTools(
   );
 
   // ── get_airline_info ─────────────────────────────────────────────────
-  server.tool(
+  server.registerTool(
     "get_airline_info",
-    "Get information about airlines by their IATA codes",
     {
-      airlineCodes: AirlineSearchSchema.shape.airlineCodes,
+      description: "Get information about airlines by their IATA codes",
+      inputSchema: z.object({
+        airlineCodes: AirlineSearchSchema.shape.airlineCodes,
+      }),
     },
     async (params) => {
       try {
@@ -57,12 +62,14 @@ export function registerLocationTools(
   );
 
   // ── search_cities ────────────────────────────────────────────────────
-  server.tool(
+  server.registerTool(
     "search_cities",
-    "Search for cities by name or IATA code",
     {
-      keyword: CitySearchSchema.shape.keyword,
-      countryCode: CitySearchSchema.shape.countryCode,
+      description: "Search for cities by name or IATA code",
+      inputSchema: z.object({
+        keyword: CitySearchSchema.shape.keyword,
+        countryCode: CitySearchSchema.shape.countryCode,
+      }),
     },
     async (params) => {
       try {
@@ -78,13 +85,15 @@ export function registerLocationTools(
   );
 
   // ── search_tours_activities ──────────────────────────────────────────
-  server.tool(
+  server.registerTool(
     "search_tours_activities",
-    "Search for tours and activities near a specific location",
     {
-      latitude: ToursActivitiesSchema.shape.latitude,
-      longitude: ToursActivitiesSchema.shape.longitude,
-      radius: ToursActivitiesSchema.shape.radius,
+      description: "Search for tours and activities near a specific location",
+      inputSchema: z.object({
+        latitude: ToursActivitiesSchema.shape.latitude,
+        longitude: ToursActivitiesSchema.shape.longitude,
+        radius: ToursActivitiesSchema.shape.radius,
+      }),
     },
     async (params) => {
       try {
