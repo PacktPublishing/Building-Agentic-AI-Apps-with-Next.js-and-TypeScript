@@ -83,7 +83,7 @@
     "langchain": "^1.5.16",
     "langchainhub": "^0.0.11",
     "lucide-react": "^0.454.0",
-    "next": "15.5.14",
+    "next": "15.5.29",
     "next-themes": "latest",
     "openai": "^6.9.1",
     "pg": "^8.16.3",
